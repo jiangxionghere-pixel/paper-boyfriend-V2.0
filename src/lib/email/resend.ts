@@ -3,7 +3,8 @@ import { Resend } from "resend"
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 // 使用已验证的域名发件人
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@send.soulboy.app"
+// 注意：必须使用在 Resend 中验证过的域名，否则只能发送给注册邮箱
+const FROM_EMAIL = "noreply@send.soulboy.app"
 const FROM_NAME = "纸片人男友"
 
 interface SendEmailOptions {
@@ -15,6 +16,8 @@ interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions) {
   try {
+    console.log(`[Email] Sending to ${options.to}, subject: ${options.subject}, from: ${FROM_NAME} <${FROM_EMAIL}>`)
+
     const { data, error } = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to: options.to,
@@ -28,7 +31,7 @@ export async function sendEmail(options: SendEmailOptions) {
       return { success: false, error }
     }
 
-    console.log(`[Email] Sent to ${options.to}: ${options.subject}`)
+    console.log(`[Email] Sent to ${options.to}: ${options.subject}, id: ${data?.id}`)
     return { success: true, id: data?.id }
   } catch (error) {
     console.error("[Email] Exception:", error)
@@ -233,11 +236,14 @@ export async function sendDailyLoveQuote(to: string, characterName: string, quot
 
 /**
  * 4. 召回邮件（3天未对话）
+ * 使用角色个性化口吻
  */
 export async function sendRecallEmail(
   to: string,
   characterName: string,
-  characterThemeColor: string = "#667eea"
+  characterThemeColor: string = "#667eea",
+  personalizedMessage: string = "最近有点忙吗？我... 有点想你了。",
+  characterId: string = ""
 ) {
   const html = `
 <!DOCTYPE html>
@@ -253,7 +259,7 @@ export async function sendRecallEmail(
     .header h1 { color: white; margin: 0; font-size: 22px; font-weight: 300; }
     .content { padding: 40px; text-align: center; }
     .content p { color: #666; line-height: 1.8; font-size: 15px; }
-    .message { background: #f8f9fa; padding: 24px; border-radius: 12px; margin: 20px 0; font-size: 16px; color: #333; }
+    .message { background: #f8f9fa; padding: 24px; border-radius: 12px; margin: 20px 0; font-size: 16px; color: #333; font-style: italic; }
     .cta { margin-top: 30px; }
     .cta a { display: inline-block; background: linear-gradient(135deg, ${characterThemeColor} 0%, #764ba2 100%); color: white; padding: 12px 32px; border-radius: 30px; text-decoration: none; font-size: 15px; }
     .warning { color: #ff6b6b; font-size: 13px; margin-top: 20px; }
@@ -268,11 +274,11 @@ export async function sendRecallEmail(
     <div class="content">
       <p>你们已经有几天没聊天了，${characterName} 似乎有些失落...</p>
       <div class="message">
-        "最近有点忙吗？我... 有点想你了。"
+        "${personalizedMessage}"
       </div>
       <p>再不来找他，关系可能会变淡哦～</p>
       <div class="cta">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/chat/${characterName.toLowerCase().replace(/\s/g, '-')}">去陪陪他 →</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/chat/${characterId}">去陪陪他 →</a>
       </div>
       <p class="warning">⚠️ 连续7天不聊天，好感度会开始下降</p>
     </div>
