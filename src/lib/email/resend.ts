@@ -2,8 +2,8 @@ import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// 使用 Resend 提供的测试域名
-const FROM_EMAIL = "onboarding@resend.dev"
+// 优先使用自定义域名发件人，否则使用 Resend 测试域名
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"
 const FROM_NAME = "纸片人男友"
 
 interface SendEmailOptions {
