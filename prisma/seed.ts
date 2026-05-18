@@ -231,7 +231,7 @@ async function main() {
                        baselineImageUrl?.includes("paper-boyfriend.f64b88c0c7ff3cdca2133f775e668d24")
     const needsUpload = baselineImageUrl && (isTempUrl || !isR2Url(baselineImageUrl) || isOldR2Url)
     
-    if (needsUpload) {
+    if (needsUpload && baselineImageUrl) {
       console.log(`  ☁️ Uploading baseline to R2 storage...`)
       const r2Url = await uploadImageToR2(
         baselineImageUrl,
