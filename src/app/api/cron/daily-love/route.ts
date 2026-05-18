@@ -22,23 +22,22 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // 获取所有有角色关系的用户
+    // 获取所有有角色关系的用户（只要有关系就发送，不限制好感度）
     const userCharacters = await prisma.userCharacter.findMany({
       include: {
         user: true,
         character: true,
       },
-      where: {
-        affinity: {
-          gte: 20, // 至少冷淡期以上才发情话
-        },
-      },
     })
+
+    console.log(`[Daily Love] Found ${userCharacters.length} user-character relationships`)
 
     const results = []
 
     for (const uc of userCharacters) {
       try {
+        console.log(`[Daily Love] Processing ${uc.user.email} / ${uc.character.name}, affinity: ${uc.affinity}`)
+
         const stage = getAffinityStage(uc.affinity)
 
         // 生成情话
@@ -64,6 +63,8 @@ export async function GET(request: Request) {
           maxTokens: 100,
         })
 
+        console.log(`[Daily Love] Generated quote for ${uc.character.name}: ${quote.trim()}`)
+
         // 发送邮件
         const result = await sendDailyLoveQuote(
           uc.user.email,
@@ -71,17 +72,22 @@ export async function GET(request: Request) {
           quote.trim()
         )
 
+        console.log(`[Daily Love] Email result for ${uc.user.email}: success=${result.success}, id=${result.id}, error=${result.error ? JSON.stringify(result.error) : 'none'}`)
+
         results.push({
           userId: uc.userId,
           characterId: uc.characterId,
+          email: uc.user.email,
           success: result.success,
           quote: quote.trim(),
+          error: result.error || undefined,
         })
       } catch (err) {
         console.error(`[Daily Love] Failed for ${uc.userId}/${uc.characterId}:`, err)
         results.push({
           userId: uc.userId,
           characterId: uc.characterId,
+          email: uc.user.email,
           success: false,
           error: String(err),
         })

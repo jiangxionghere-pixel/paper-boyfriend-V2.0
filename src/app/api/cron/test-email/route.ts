@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server"
-import { sendEmail, sendWelcomeEmail, sendDailyLoveQuote } from "@/lib/email/resend"
+import {
+  sendEmail,
+  sendWelcomeEmail,
+  sendDailyLoveQuote,
+  sendVerificationCodeEmail,
+  sendRecallEmail,
+} from "@/lib/email/resend"
 
 /**
  * 测试邮件发送 API
  * 用于调试邮件功能
+ * 支持类型: welcome, love, verify, recall
  */
 
 export const dynamic = "force-dynamic"
@@ -33,20 +40,19 @@ export async function GET(request: Request) {
         result = await sendDailyLoveQuote(to, "林屿", "早安，今天也是想你的每一天。")
         break
       case "verify":
-        result = await sendEmail({
+        result = await sendVerificationCodeEmail(to, "123456")
+        break
+      case "recall":
+        result = await sendRecallEmail(
           to,
-          subject: "【纸片人男友】测试邮件",
-          html: `
-            <div style="padding: 20px; font-family: sans-serif;">
-              <h2>测试邮件</h2>
-              <p>这是一封测试邮件，如果你能收到，说明邮件服务配置正确。</p>
-              <p>时间：${new Date().toLocaleString("zh-CN")}</p>
-            </div>
-          `,
-        })
+          "林屿",
+          "#7B8FA1",
+          "这几天... 代码写得不太顺，可能是因为没人催我休息吧。",
+          "lin-yu"
+        )
         break
       default:
-        return NextResponse.json({ error: "Invalid type" }, { status: 400 })
+        return NextResponse.json({ error: "Invalid type. Supported: welcome, love, verify, recall" }, { status: 400 })
     }
 
     return NextResponse.json({

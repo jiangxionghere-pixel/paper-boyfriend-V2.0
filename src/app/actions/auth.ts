@@ -4,7 +4,7 @@ import { z } from "zod"
 import { prisma } from "@/lib/db/prisma"
 import { hashPassword, verifyPassword } from "@/lib/auth/password"
 import { createSession, destroySession, getSession } from "@/lib/auth/session"
-import { sendWelcomeEmail } from "@/lib/email/resend"
+import { sendWelcomeEmail, sendVerificationCodeEmail } from "@/lib/email/resend"
 import { redirect } from "next/navigation"
 
 const signupSchema = z.object({
@@ -125,4 +125,101 @@ export async function getCurrentUser() {
     select: { id: true, email: true, name: true, avatarUrl: true },
   })
   return user
+}
+
+// ==================== 忘记密码 ====================
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email("请输入有效的邮箱地址"),
+})
+
+const resetPasswordSchema = z.object({
+  email: z.string().email(),
+  code: z.string().length(6, "验证码为6位数字"),
+  newPassword: z.string().min(6, "密码至少6位").max(100),
+})
+
+function generateVerificationCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+export async function sendPasswordResetCode(prevState: unknown, formData: FormData) {
+  const rawData = {
+    email: formData.get("email"),
+  }
+
+  const parsed = forgotPasswordSchema.safeParse(rawData)
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0].message }
+  }
+
+  const { email } = parsed.data
+
+  const user = await prisma.user.findUnique({ where: { email } })
+  if (!user) {
+    return { error: "该邮箱未注册" }
+  }
+
+  const code = generateVerificationCode()
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000) // 30分钟有效期
+
+  await prisma.passwordResetCode.create({
+    data: {
+      email,
+      code,
+      expiresAt,
+    },
+  })
+
+  await sendVerificationCodeEmail(email, code)
+
+  return { success: true, email }
+}
+
+export async function resetPassword(prevState: unknown, formData: FormData) {
+  const rawData = {
+    email: formData.get("email"),
+    code: formData.get("code"),
+    newPassword: formData.get("newPassword"),
+  }
+
+  const parsed = resetPasswordSchema.safeParse(rawData)
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0].message }
+  }
+
+  const { email, code, newPassword } = parsed.data
+
+  const resetCode = await prisma.passwordResetCode.findFirst({
+    where: {
+      email,
+      code,
+      used: false,
+      expiresAt: {
+        gt: new Date(),
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  })
+
+  if (!resetCode) {
+    return { error: "验证码无效或已过期" }
+  }
+
+  const passwordHash = await hashPassword(newPassword)
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { email },
+      data: { passwordHash },
+    }),
+    prisma.passwordResetCode.update({
+      where: { id: resetCode.id },
+      data: { used: true },
+    }),
+  ])
+
+  return { success: true, redirectTo: "/login" }
 }
