@@ -8,6 +8,7 @@ import { buildSystemPrompt } from "@/lib/prompts/system"
 import { buildImagePrompt } from "@/lib/prompts/image"
 import { getUserProfileText, extractAndSaveMemory } from "@/lib/memory"
 import { getAffinityStage, shouldSendPhoto, updateAffinity } from "@/lib/affinity"
+import type { AffinityStage } from "@/types"
 import { put } from "@vercel/blob"
 import type { PutCommandOptions } from "@vercel/blob"
 
@@ -50,7 +51,7 @@ export async function POST(
     const stage = getAffinityStage(affinity)
 
     // 阶段2增强：检查是否有待处理的阶段变化
-    const pendingStageTransition = userCharacter.pendingStageTransition
+    const pendingStageTransition = userCharacter.pendingStageTransition as AffinityStage | null
 
     const systemPrompt = buildSystemPrompt(
       character,
