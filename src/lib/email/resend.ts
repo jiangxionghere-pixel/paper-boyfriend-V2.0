@@ -16,7 +16,7 @@ interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions) {
   try {
-    console.log(`[Email] Sending to ${options.to}, subject: ${options.subject}, from: ${FROM_NAME} <${FROM_EMAIL}>`)
+    console.log(`[Email] v2 - Sending to ${options.to}, subject: ${options.subject}, from: ${FROM_NAME} <${FROM_EMAIL}>`)
 
     const { data, error } = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
