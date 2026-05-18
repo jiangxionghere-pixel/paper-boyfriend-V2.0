@@ -65,6 +65,7 @@ model UserCharacter {
   lastChatAt              DateTime?
   lastAffinityDate        DateTime? // 上次更新亲和度的日期（用于日累积上限）
   dailyAffinityDelta      Int       @default(0) // 当日累积亲和度变化
+  ttsEnabled              Boolean   @default(true) // TTS语音开关，默认开启
 
   user      User      @relation(fields: [userId], references: [id])
   character Character @relation(fields: [characterId], references: [id])

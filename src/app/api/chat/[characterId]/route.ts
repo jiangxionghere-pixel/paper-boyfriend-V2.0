@@ -120,9 +120,9 @@ export async function POST(
       },
     })
 
-    // Generate TTS audio after message is created
+    // Generate TTS audio after message is created (only if user enabled TTS)
     let audioUrl: string | null = null
-    if (character.voiceId) {
+    if (character.voiceId && userCharacter.ttsEnabled) {
       try {
         audioUrl = await textToSpeech(cleanContent.slice(0, 500), character.voiceId)
         if (audioUrl) {

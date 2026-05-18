@@ -80,11 +80,13 @@ export default async function ChatPage({
           role: m.role as "user" | "assistant",
           content: m.content,
           imageUrl: m.imageUrl,
+          audioUrl: m.audioUrl,
           createdAt: m.createdAt.toISOString(),
         }))}
         themeColor={character.themeColor}
         userAvatarUrl={user.avatarUrl}
         characterAvatarUrl={character.avatarUrl}
+        initialTtsEnabled={userCharacter.ttsEnabled}
       />
     </div>
   )

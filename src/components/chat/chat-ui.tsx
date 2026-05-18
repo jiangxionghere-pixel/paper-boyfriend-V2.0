@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Send, Loader2, User } from "lucide-react"
+import { Send, Loader2, User, Volume2, VolumeX } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { TTSPlayer } from "./tts-player"
@@ -22,12 +22,23 @@ interface ChatUIProps {
   themeColor: string
   userAvatarUrl?: string | null
   characterAvatarUrl?: string | null
+  initialTtsEnabled?: boolean
 }
 
-export function ChatUI({ characterId, userCharacterId, initialMessages, themeColor, userAvatarUrl, characterAvatarUrl }: ChatUIProps) {
+export function ChatUI({
+  characterId,
+  userCharacterId,
+  initialMessages,
+  themeColor,
+  userAvatarUrl,
+  characterAvatarUrl,
+  initialTtsEnabled = true,
+}: ChatUIProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [ttsEnabled, setTtsEnabled] = useState(initialTtsEnabled)
+  const [isTogglingTts, setIsTogglingTts] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -44,6 +55,34 @@ export function ChatUI({ characterId, userCharacterId, initialMessages, themeCol
   useEffect(() => {
     inputRef.current?.focus()
   }, [isLoading])
+
+  // Toggle TTS setting
+  const toggleTts = async () => {
+    if (isTogglingTts) return
+    setIsTogglingTts(true)
+
+    const newValue = !ttsEnabled
+    try {
+      const res = await fetch("/api/user/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userCharacterId,
+          ttsEnabled: newValue,
+        }),
+      })
+
+      if (res.ok) {
+        setTtsEnabled(newValue)
+      } else {
+        console.error("Failed to toggle TTS")
+      }
+    } catch (error) {
+      console.error("TTS toggle error:", error)
+    } finally {
+      setIsTogglingTts(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -193,14 +232,17 @@ export function ChatUI({ characterId, userCharacterId, initialMessages, themeCol
                   </div>
                 )}
 
-                {/* TTS Player */}
-                {msg.role === "assistant" && msg.audioUrl && (
+                {/* TTS Player - only show if TTS is enabled */}
+                {msg.role === "assistant" && msg.audioUrl && ttsEnabled && (
                   <TTSPlayer audioUrl={msg.audioUrl} themeColor={themeColor} />
                 )}
 
                 {/* Timestamp */}
-                <p className="text-[10px] mt-2 text-white/15">
-                  {new Date(msg.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
+                <p className="text-[10px] text-white/10 mt-2">
+                  {new Date(msg.createdAt).toLocaleTimeString("zh-CN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
 
@@ -224,91 +266,64 @@ export function ChatUI({ characterId, userCharacterId, initialMessages, themeCol
               )}
             </div>
           ))}
-
-          {/* Typing Indicator */}
-          {isLoading && (
-            <div className="flex justify-start animate-fade-in">
-              <div
-                className="rounded-2xl rounded-bl-md px-5 py-4 flex items-center gap-3"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.04)",
-                }}
-              >
-                <div className="flex items-center gap-1">
-                  <div
-                    className="w-1.5 h-1.5 rounded-full typing-dot"
-                    style={{ backgroundColor: `${themeColor}60` }}
-                  />
-                  <div
-                    className="w-1.5 h-1.5 rounded-full typing-dot"
-                    style={{ backgroundColor: `${themeColor}60` }}
-                  />
-                  <div
-                    className="w-1.5 h-1.5 rounded-full typing-dot"
-                    style={{ backgroundColor: `${themeColor}60` }}
-                  />
-                </div>
-                <span className="text-white/15 text-xs">输入中...</span>
-              </div>
-            </div>
-          )}
-
           <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* Input Area */}
-      <div className="shrink-0 px-4 py-4">
-        <form
-          onSubmit={handleSubmit}
-          className="max-w-2xl mx-auto flex items-center gap-2"
-          style={{
-            backgroundColor: "rgba(255, 255, 255, 0.02)",
-            borderRadius: "1.25rem",
-            border: `1px solid ${themeColor}10`,
-            padding: "0.375rem",
-            transition: "border-color 0.3s ease",
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = `${themeColor}25`
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = `${themeColor}10`
-          }}
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="输入消息..."
-            disabled={isLoading}
-            className="flex-1 bg-transparent px-4 py-2.5 text-sm outline-none disabled:opacity-50"
-            style={{ color: "rgba(255,255,255,0.7)", caretColor: `${themeColor}80` }}
-            autoComplete="off"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 disabled:opacity-20"
-            style={{
-              backgroundColor: input.trim() ? `${themeColor}25` : "transparent",
-              border: input.trim() ? `1px solid ${themeColor}30` : "1px solid transparent",
-            }}
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" style={{ color: `${themeColor}80` }} />
-            ) : (
-              <Send className="w-4 h-4" style={{ color: input.trim() ? `${themeColor}cc` : "rgba(255,255,255,0.3)" }} />
-            )}
-          </button>
-        </form>
+      <div className="shrink-0 px-4 py-4" style={{ borderTop: `1px solid ${themeColor}10` }}>
+        <div className="max-w-2xl mx-auto">
+          {/* TTS Toggle */}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={toggleTts}
+              disabled={isTogglingTts}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all duration-200 hover:scale-105 disabled:opacity-50"
+              style={{
+                backgroundColor: ttsEnabled ? `${themeColor}15` : "rgba(255,255,255,0.03)",
+                color: ttsEnabled ? `${themeColor}cc` : "rgba(255,255,255,0.3)",
+                border: `1px solid ${ttsEnabled ? `${themeColor}25` : "rgba(255,255,255,0.05)"}`,
+              }}
+            >
+              {ttsEnabled ? (
+                <Volume2 className="w-3 h-3" />
+              ) : (
+                <VolumeX className="w-3 h-3" />
+              )}
+              <span>{ttsEnabled ? "语音已开启" : "语音已关闭"}</span>
+            </button>
+            <span className="text-[10px] text-white/15">
+              {ttsEnabled ? "角色回复将自动生成语音" : "语音功能已暂停"}
+            </span>
+          </div>
 
-        {/* Input hint */}
-        <p className="text-center mt-2 text-white/10 text-[10px] tracking-wider">
-          他会记住你们的对话，关系会随着相处自然演进
-        </p>
+          <form onSubmit={handleSubmit} className="flex gap-3">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="说点什么..."
+              disabled={isLoading}
+              className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-2xl px-5 py-3.5 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/10 transition-colors disabled:opacity-30"
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 hover:scale-105 disabled:opacity-30 disabled:hover:scale-100"
+              style={{
+                backgroundColor: `${themeColor}20`,
+                border: `1px solid ${themeColor}30`,
+              }}
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" style={{ color: `${themeColor}cc` }} />
+              ) : (
+                <Send className="w-5 h-5" style={{ color: `${themeColor}cc` }} />
+              )}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )
