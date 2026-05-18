@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 // 使用已验证的域名发件人
 // 注意：必须使用在 Resend 中验证过的域名，否则只能发送给注册邮箱
-const FROM_EMAIL = "noreply@send.soulboy.app"
+const FROM_EMAIL = "noreply@soulboy.app"
 const FROM_NAME = "纸片人男友"
 
 interface SendEmailOptions {
