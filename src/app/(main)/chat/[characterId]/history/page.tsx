@@ -3,9 +3,11 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db/prisma"
 import { getCurrentUser } from "@/app/actions/auth"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Calendar, MessageCircle } from "lucide-react"
+import { ArrowLeft, Calendar, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react"
 
 export const dynamic = "force-dynamic"
+
+const MESSAGES_PER_PAGE = 30
 
 function formatDate(date: Date): string {
   const now = new Date()
@@ -43,10 +45,15 @@ function groupMessagesByDate(messages: Array<{ createdAt: Date }>) {
 
 export default async function ChatHistoryPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ characterId: string }>
+  searchParams: Promise<{ page?: string }>
 }) {
   const { characterId } = await params
+  const { page: pageParam } = await searchParams
+  const currentPage = Math.max(1, parseInt(pageParam || "1", 10))
+
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
@@ -66,9 +73,19 @@ export default async function ChatHistoryPage({
 
   if (!userCharacter) redirect(`/characters/${characterId}`)
 
+  // 获取总消息数
+  const totalMessages = await prisma.message.count({
+    where: { userCharacterId: userCharacter.id },
+  })
+
+  const totalPages = Math.ceil(totalMessages / MESSAGES_PER_PAGE)
+
+  // 分页查询消息
   const messages = await prisma.message.findMany({
     where: { userCharacterId: userCharacter.id },
     orderBy: { createdAt: "desc" },
+    skip: (currentPage - 1) * MESSAGES_PER_PAGE,
+    take: MESSAGES_PER_PAGE,
     select: {
       id: true,
       role: true,
@@ -110,7 +127,7 @@ export default async function ChatHistoryPage({
             <MessageCircle className="w-7 h-7" style={{ color: `${character.themeColor}90` }} />
           </div>
           <h1 className="text-xl font-light text-white/70 mb-1">{character.name}</h1>
-          <p className="text-white/20 text-sm">{messages.length} 条消息</p>
+          <p className="text-white/20 text-sm">{totalMessages} 条消息 · 第 {currentPage}/{totalPages} 页</p>
         </div>
 
         {/* Messages grouped by date */}
@@ -187,6 +204,39 @@ export default async function ChatHistoryPage({
             )
           })}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-10">
+            {currentPage > 1 && (
+              <Link href={`/chat/${characterId}/history?page=${currentPage - 1}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/30 hover:text-white/60 hover:bg-white/[0.03]"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  上一页
+                </Button>
+              </Link>
+            )}
+            <span className="text-white/20 text-sm px-4">
+              {currentPage} / {totalPages}
+            </span>
+            {currentPage < totalPages && (
+              <Link href={`/chat/${characterId}/history?page=${currentPage + 1}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/30 hover:text-white/60 hover:bg-white/[0.03]"
+                >
+                  下一页
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            )}
+          </div>
+        )}
 
         {messages.length === 0 && (
           <div className="text-center py-24 animate-fade-in">

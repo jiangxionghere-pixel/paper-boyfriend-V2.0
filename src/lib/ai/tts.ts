@@ -1,59 +1,45 @@
 const TTS_API_KEY = process.env.TTS_API_KEY || ""
 const TTS_APP_ID = process.env.TTS_APP_ID || ""
-const TTS_ACCESS_KEY = process.env.TTS_ACCESS_KEY || ""
-const TTS_SECRET_KEY = process.env.TTS_SECRET_KEY || ""
 
 /**
- * Doubao-语音合成-2.0 (火山引擎)
- * 文档: https://www.volcengine.com/docs/6561/1719100
+ * 豆包语音合成模型 2.0 - 单向流式 HTTP V3 API
+ * 文档: https://www.volcengine.com/docs/6561/1329505
  *
- * 使用 WebSocket 长连接方式接入
- * 简化版本：使用 HTTP POST 方式（如果支持）
- *
- * 由于火山引擎 TTS 主要使用 WebSocket，这里提供一个适配层
- * 如果需要完整 WebSocket 实现，需要额外开发
+ * 请求路径: https://openspeech.bytedance.com/api/v3/tts/unidirectional
+ * 资源ID: seed-tts-2.0 (豆包语音合成模型2.0)
  */
 
 export async function textToSpeech(
   text: string,
   voiceId?: string
 ): Promise<string | null> {
-  if (!TTS_API_KEY) {
-    console.log("[TTS] API key not configured, skipping")
+  if (!TTS_API_KEY || !TTS_APP_ID) {
+    console.log("[TTS] API key or App ID not configured, skipping")
     return null
   }
 
   try {
-    // 火山引擎 TTS HTTP API (如果可用)
-    // 或者使用 OpenAI 兼容接口
     const response = await fetch(
-      "https://openspeech.bytedance.com/api/v1/tts",
+      "https://openspeech.bytedance.com/api/v3/tts/unidirectional",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${TTS_API_KEY}`,
+          "X-Api-App-Id": TTS_APP_ID,
+          "X-Api-Access-Key": TTS_API_KEY,
+          "X-Api-Resource-Id": "seed-tts-2.0",
         },
         body: JSON.stringify({
-          app: {
-            appid: TTS_APP_ID,
-            token: "access_token",
-            cluster: "volcano_tts",
-          },
           user: {
             uid: "paper-boyfriend-user",
           },
-          audio: {
-            voice_type: voiceId || "BV001_streaming",
-            encoding: "mp3",
-            speed_ratio: 1.0,
-            volume_ratio: 1.0,
-            pitch_ratio: 1.0,
-          },
-          request: {
-            reqid: `tts-${Date.now()}`,
+          req_params: {
             text: text.slice(0, 500),
-            operation: "query",
+            speaker: voiceId || "zh_male_xiaoming_seed_tts_v2",
+            audio_params: {
+              format: "mp3",
+              sample_rate: 24000,
+            },
           },
         }),
       }
@@ -65,28 +51,61 @@ export async function textToSpeech(
       return null
     }
 
-    const result = await response.json()
-
-    // 如果返回的是 base64 音频数据
-    if (result.data && result.data.audio) {
-      const audioBuffer = Buffer.from(result.data.audio, "base64")
-      const audioBlob = new Blob([audioBuffer], { type: "audio/mp3" })
-
-      // Upload to Vercel Blob
-      const { put } = await import("@vercel/blob")
-      const { url } = await put(
-        `tts/${Date.now()}-${voiceId || "default"}.mp3`,
-        audioBlob,
-        {
-          access: "public",
-        }
-      )
-
-      return url
+    // 流式响应：读取所有 chunk 并提取音频数据
+    const reader = response.body?.getReader()
+    if (!reader) {
+      console.error("[TTS] No response body")
+      return null
     }
 
-    console.log("[TTS] No audio data in response")
-    return null
+    const chunks: Uint8Array[] = []
+    let audioBase64 = ""
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      // 将 Uint8Array 转换为字符串
+      const chunkText = new TextDecoder().decode(value)
+
+      // 解析 JSON 行，提取音频数据
+      const lines = chunkText.split("\n").filter((line) => line.trim())
+      for (const line of lines) {
+        try {
+          const data = JSON.parse(line)
+          if (data.data?.audio) {
+            audioBase64 += data.data.audio
+          }
+          if (data.data?.usage) {
+            console.log("[TTS] Usage:", data.data.usage)
+          }
+        } catch {
+          // 非 JSON 行，忽略
+        }
+      }
+    }
+
+    if (!audioBase64) {
+      console.log("[TTS] No audio data in response")
+      return null
+    }
+
+    // 解码 base64 音频数据
+    const audioBuffer = Buffer.from(audioBase64, "base64")
+    const audioBlob = new Blob([audioBuffer], { type: "audio/mp3" })
+
+    // 上传到 Vercel Blob
+    const { put } = await import("@vercel/blob")
+    const { url } = await put(
+      `tts/${Date.now()}-${voiceId || "default"}.mp3`,
+      audioBlob,
+      {
+        access: "public",
+      }
+    )
+
+    console.log(`[TTS] Generated audio: ${url}`)
+    return url
   } catch (error) {
     console.error("[TTS] Generation failed:", error)
     return null

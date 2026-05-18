@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Share2, Download, X, Heart, MessageCircle, Calendar, Sparkles, Quote } from "lucide-react"
+import { Share2, Download, X, Heart, MessageCircle, Calendar, Sparkles, Quote, TrendingUp } from "lucide-react"
 
 interface ShareCardProps {
   character: {
@@ -25,10 +25,8 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
-  // 根据亲密度计算进度条宽度
   const affinityPercent = Math.min((stats.affinity / 100) * 100, 100)
 
-  // 根据阶段获取描述
   const getStageDescription = (stage: string) => {
     const descriptions: Record<string, string> = {
       "疏离期": "缘分刚刚开始",
@@ -38,6 +36,17 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
       "热恋期": "命中注定的他",
     }
     return descriptions[stage] || "在彼此陪伴中成长"
+  }
+
+  const getStageEmoji = (stage: string) => {
+    const emojis: Record<string, string> = {
+      "疏离期": "🌱",
+      "冷淡期": "🌿",
+      "平稳期": "🌸",
+      "亲密期": "🌺",
+      "热恋期": "🔥",
+    }
+    return emojis[stage] || "✨"
   }
 
   const handleCopy = async () => {
@@ -51,7 +60,6 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
     }
   }
 
-  // 降级下载方案
   const fallbackDownload = useCallback(() => {
     const canvas = document.createElement("canvas")
     canvas.width = 800
@@ -59,35 +67,29 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // 背景渐变
     const gradient = ctx.createLinearGradient(0, 0, 800, 1000)
     gradient.addColorStop(0, "#0a0a0a")
     gradient.addColorStop(1, "#1a1a2e")
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, 800, 1000)
 
-    // 顶部装饰
     ctx.fillStyle = character.themeColor + "15"
     ctx.fillRect(0, 0, 800, 350)
 
-    // 装饰圆
     ctx.beginPath()
     ctx.arc(400, 200, 120, 0, Math.PI * 2)
     ctx.fillStyle = character.themeColor + "10"
     ctx.fill()
 
-    // 角色名
     ctx.fillStyle = "#ffffff"
     ctx.font = "bold 56px -apple-system, sans-serif"
     ctx.textAlign = "center"
     ctx.fillText(character.name, 400, 180)
 
-    // 职业
     ctx.fillStyle = "#ffffff60"
     ctx.font = "24px -apple-system, sans-serif"
     ctx.fillText(character.occupation, 400, 230)
 
-    // 分隔线
     ctx.beginPath()
     ctx.moveTo(250, 280)
     ctx.lineTo(550, 280)
@@ -95,7 +97,6 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
     ctx.lineWidth = 1
     ctx.stroke()
 
-    // 天数
     ctx.fillStyle = "#ffffff"
     ctx.font = "48px -apple-system, sans-serif"
     ctx.fillText(`${stats.daysTogether}`, 400, 400)
@@ -103,7 +104,6 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
     ctx.font = "20px -apple-system, sans-serif"
     ctx.fillText("相识天数", 400, 440)
 
-    // 亲密度
     ctx.fillStyle = "#ffffff"
     ctx.font = "36px -apple-system, sans-serif"
     ctx.fillText(`${stats.affinity}`, 400, 520)
@@ -111,17 +111,14 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
     ctx.font = "20px -apple-system, sans-serif"
     ctx.fillText(`亲密度 · ${stats.stage}`, 400, 560)
 
-    // 进度条背景
     ctx.fillStyle = "#ffffff10"
     ctx.roundRect(200, 590, 400, 8, 4)
     ctx.fill()
 
-    // 进度条
     ctx.fillStyle = character.themeColor + "cc"
     ctx.roundRect(200, 590, 400 * (stats.affinity / 100), 8, 4)
     ctx.fill()
 
-    // 底部
     ctx.fillStyle = "#ffffff30"
     ctx.font = "18px -apple-system, sans-serif"
     ctx.fillText("纸片人男友 2.0", 400, 900)
@@ -132,13 +129,11 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
     link.click()
   }, [character.name, character.themeColor, character.occupation, stats.daysTogether, stats.affinity, stats.stage])
 
-  // 使用 html2canvas 生成高质量分享图
   const handleDownload = useCallback(async () => {
     if (!cardRef.current) return
     setIsGenerating(true)
 
     try {
-      // 动态导入 html2canvas
       const html2canvas = (await import("html2canvas")).default
 
       const canvas = await html2canvas(cardRef.current, {
@@ -155,7 +150,6 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
       link.click()
     } catch (error) {
       console.error("[ShareCard] Generate image failed:", error)
-      // 降级方案：使用原生 canvas
       fallbackDownload()
     } finally {
       setIsGenerating(false)
@@ -173,70 +167,76 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
           <X className="w-4 h-4" />
         </button>
 
-        {/* Preview Card (for html2canvas capture) */}
+        {/* Preview Card */}
         <div
           ref={cardRef}
           className="bg-gradient-to-b from-[#0a0a0a] to-[#111122] rounded-3xl border border-white/[0.06] overflow-hidden shadow-2xl"
         >
-          {/* Top decoration */}
+          {/* Top decoration with gradient overlay */}
           <div
-            className="relative h-40 flex items-center justify-center overflow-hidden"
+            className="relative h-44 flex items-center justify-center overflow-hidden"
             style={{ backgroundColor: `${character.themeColor}08` }}
           >
-            {/* Decorative circles */}
+            {/* Animated decorative circles */}
             <div
-              className="absolute w-64 h-64 rounded-full -top-20 -left-20 opacity-20"
+              className="absolute w-72 h-72 rounded-full -top-24 -left-24 opacity-20 animate-pulse"
               style={{ backgroundColor: `${character.themeColor}20` }}
             />
             <div
-              className="absolute w-48 h-48 rounded-full -bottom-10 -right-10 opacity-15"
+              className="absolute w-56 h-56 rounded-full -bottom-12 -right-12 opacity-15"
               style={{ backgroundColor: `${character.themeColor}15` }}
             />
+            <div
+              className="absolute w-32 h-32 rounded-full top-4 right-8 opacity-10"
+              style={{ backgroundColor: `${character.themeColor}25` }}
+            />
 
-            {/* Avatar */}
+            {/* Avatar with glow effect */}
             <div className="relative z-10">
               {character.baselineImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={character.baselineImageUrl}
                   alt={character.name}
-                  className="w-24 h-24 rounded-full object-cover border-3 shadow-lg"
+                  className="w-28 h-28 rounded-full object-cover border-3 shadow-lg"
                   style={{
                     borderColor: `${character.themeColor}50`,
-                    boxShadow: `0 0 30px ${character.themeColor}20`,
+                    boxShadow: `0 0 40px ${character.themeColor}30, 0 0 80px ${character.themeColor}15`,
                   }}
                 />
               ) : (
                 <div
-                  className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-light shadow-lg"
+                  className="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-light shadow-lg"
                   style={{
                     backgroundColor: `${character.themeColor}20`,
                     color: `${character.themeColor}cc`,
-                    boxShadow: `0 0 30px ${character.themeColor}20`,
+                    boxShadow: `0 0 40px ${character.themeColor}30`,
                   }}
                 >
                   {character.name[0]}
                 </div>
               )}
-              {/* Status dot */}
+              {/* Status dot with pulse */}
               <div
-                className="absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-[#0a0a0a]"
+                className="absolute bottom-2 right-2 w-6 h-6 rounded-full border-2 border-[#0a0a0a] flex items-center justify-center"
                 style={{ backgroundColor: character.themeColor }}
-              />
+              >
+                <div className="w-full h-full rounded-full animate-ping opacity-30" style={{ backgroundColor: character.themeColor }} />
+              </div>
             </div>
           </div>
 
           {/* Content */}
-          <div className="px-8 pb-8 pt-4">
+          <div className="px-8 pb-8 pt-5">
             {/* Character info */}
             <div className="text-center mb-6">
               <h3 className="text-2xl font-light text-white/80 mb-1">{character.name}</h3>
               <p className="text-white/30 text-sm">{character.occupation}</p>
               <div
-                className="inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full text-xs"
+                className="inline-flex items-center gap-1.5 mt-3 px-4 py-1.5 rounded-full text-xs"
                 style={{
                   backgroundColor: `${character.themeColor}12`,
                   color: `${character.themeColor}aa`,
+                  border: `1px solid ${character.themeColor}20`,
                 }}
               >
                 <Sparkles className="w-3 h-3" />
@@ -244,63 +244,87 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
               </div>
             </div>
 
-            {/* Tagline */}
+            {/* Tagline with enhanced styling */}
             {character.tagline && (
-              <div className="mb-6 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <Quote className="w-3 h-3 text-white/10 mb-1" />
-                <p className="text-white/40 text-sm italic leading-relaxed">
+              <div className="mb-6 px-5 py-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] relative">
+                <Quote className="w-4 h-4 text-white/10 mb-2" />
+                <p className="text-white/50 text-sm italic leading-relaxed pl-2">
                   {character.tagline}
                 </p>
+                <div
+                  className="absolute -bottom-px left-8 right-8 h-px"
+                  style={{ backgroundColor: `${character.themeColor}30` }}
+                />
               </div>
             )}
 
-            {/* Stats */}
+            {/* Enhanced Stats Grid */}
             <div className="grid grid-cols-3 gap-3 mb-6">
-              <div className="text-center p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-colors">
+              <div className="text-center p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-all hover:bg-white/[0.03]">
                 <Calendar className="w-4 h-4 mx-auto mb-2 text-white/20" />
-                <div className="text-xl font-light text-white/70">{stats.daysTogether}</div>
+                <div className="text-2xl font-light text-white/70">{stats.daysTogether}</div>
                 <div className="text-[10px] text-white/20 mt-1">相识天数</div>
               </div>
               <div
-                className="text-center p-4 rounded-2xl border transition-colors"
+                className="text-center p-4 rounded-2xl border transition-all hover:scale-[1.02]"
                 style={{
                   backgroundColor: `${character.themeColor}08`,
                   borderColor: `${character.themeColor}15`,
                 }}
               >
                 <Heart className="w-4 h-4 mx-auto mb-2" style={{ color: `${character.themeColor}90` }} />
-                <div className="text-xl font-light" style={{ color: `${character.themeColor}cc` }}>
+                <div className="text-2xl font-light" style={{ color: `${character.themeColor}cc` }}>
                   {stats.affinity}
                 </div>
                 <div className="text-[10px] text-white/20 mt-1">亲密度</div>
               </div>
-              <div className="text-center p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-colors">
+              <div className="text-center p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-all hover:bg-white/[0.03]">
                 <MessageCircle className="w-4 h-4 mx-auto mb-2 text-white/20" />
-                <div className="text-lg font-light text-white/70">{stats.stage}</div>
-                <div className="text-[10px] text-white/20 mt-1">关系阶段</div>
+                <div className="text-lg font-light text-white/70">{getStageEmoji(stats.stage)}</div>
+                <div className="text-[10px] text-white/20 mt-1">{stats.stage}</div>
               </div>
             </div>
 
-            {/* Affinity progress bar */}
+            {/* Enhanced Affinity progress bar */}
             <div className="mb-6">
-              <div className="flex justify-between text-[10px] text-white/20 mb-1.5">
-                <span>亲密度进度</span>
+              <div className="flex justify-between items-center text-[10px] text-white/20 mb-2">
+                <span className="flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  亲密度进度
+                </span>
                 <span>{Math.round(affinityPercent)}%</span>
               </div>
-              <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
+              <div className="h-2.5 rounded-full bg-white/[0.04] overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-1000 ease-out"
+                  className="h-full rounded-full transition-all duration-1000 ease-out relative"
                   style={{
                     width: `${affinityPercent}%`,
                     backgroundColor: character.themeColor,
-                    boxShadow: `0 0 10px ${character.themeColor}40`,
+                    boxShadow: `0 0 12px ${character.themeColor}50`,
                   }}
-                />
+                >
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                </div>
+              </div>
+              {/* Stage markers */}
+              <div className="flex justify-between mt-1.5 px-0.5">
+                {["疏离期", "冷淡期", "平稳期", "亲密期", "热恋期"].map((stage) => (
+                  <div
+                    key={stage}
+                    className="text-[8px] transition-colors"
+                    style={{
+                      color: stats.stage === stage ? character.themeColor : "rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    {stage[0]}
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Footer */}
-            <div className="text-center pt-4 border-t border-white/[0.04]">
+            <div className="text-center pt-5 border-t border-white/[0.04]">
               <p className="text-white/15 text-xs flex items-center justify-center gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 纸片人男友 2.0 · 让陪伴更有温度
@@ -326,11 +350,12 @@ export function ShareCard({ character, stats, onClose }: ShareCardProps) {
             )}
           </Button>
           <Button
-            className="flex-1 h-11 rounded-xl transition-all hover:scale-[1.02]"
+            className="flex-1 h-11 rounded-xl transition-all hover:scale-[1.02] hover:shadow-lg"
             style={{
               backgroundColor: `${character.themeColor}20`,
               border: `1px solid ${character.themeColor}30`,
               color: `${character.themeColor}cc`,
+              boxShadow: `0 0 20px ${character.themeColor}10`,
             }}
             onClick={handleDownload}
             disabled={isGenerating}

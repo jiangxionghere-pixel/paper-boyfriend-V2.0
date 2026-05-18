@@ -103,19 +103,6 @@ export async function POST(
       }
     }
 
-    // Generate TTS audio (async, non-blocking)
-    const audioUrl: string | null = null
-    if (character.voiceId) {
-      textToSpeech(cleanContent.slice(0, 500), character.voiceId).then((url) => {
-        if (url) {
-          prisma.message.update({
-            where: { id: assistantMessageRecord.id },
-            data: { audioUrl: url },
-          }).catch((err) => console.error("[TTS] Failed to update message:", err))
-        }
-      }).catch((err) => console.error("[TTS] Generation error:", err))
-    }
-
     const userMessageRecord = await prisma.message.create({
       data: {
         userCharacterId,
@@ -132,6 +119,22 @@ export async function POST(
         imageUrl,
       },
     })
+
+    // Generate TTS audio after message is created
+    let audioUrl: string | null = null
+    if (character.voiceId) {
+      try {
+        audioUrl = await textToSpeech(cleanContent.slice(0, 500), character.voiceId)
+        if (audioUrl) {
+          await prisma.message.update({
+            where: { id: assistantMessageRecord.id },
+            data: { audioUrl },
+          })
+        }
+      } catch (err) {
+        console.error("[TTS] Generation error:", err)
+      }
+    }
 
     await prisma.userCharacter.update({
       where: { id: userCharacterId },
