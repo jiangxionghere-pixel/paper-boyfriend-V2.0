@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userCharacters UserCharacter[]
+}
+
+model Character {
+  id               String   @id
+  name             String
+  nameEn           String
+  age              Int
+  occupation       String
+  city             String
+  mbti             String
+  tagline          String
+  personalityTags  String[]
+  background       String   @db.Text
+  speakingStyle    String   @db.Text
+  habits           String   @db.Text
+  loveThreshold    String
+  appearancePrompt String   @db.Text
+  baselineImageUrl String?
+  photoScenes      String[]
+  avatarUrl        String?
+  themeColor       String
+  voiceId          String?
+
+  initialAffinity  Int      @default(50)
+  affinityGainRate Float    @default(1.0)
+  affinityLossRate Float    @default(1.0)
+  thawThreshold    Int      @default(60)
+  jealousyFactor   Float    @default(1.0)
+
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  userCharacters   UserCharacter[]
+}
+
+model UserCharacter {
+  id                      String    @id @default(cuid())
+  userId                  String
+  characterId             String
+  affinity                Int       @default(50)
+  pendingStageTransition  String?
+  selectedAt              DateTime  @default(now())
+  lastChatAt              DateTime?
+  lastAffinityDate        DateTime? // 上次更新亲和度的日期（用于日累积上限）
+  dailyAffinityDelta      Int       @default(0) // 当日累积亲和度变化
+
+  user      User      @relation(fields: [userId], references: [id])
+  character Character @relation(fields: [characterId], references: [id])
+
+  messages     Message[]
+  profiles     UserProfile[]
+  affinityLogs AffinityLog[]
+
+  @@unique([userId, characterId])
+  @@index([userId])
+}
+
+model Message {
+  id              String   @id @default(cuid())
+  userCharacterId String
+  role            String
+  content         String   @db.Text
+  imageUrl        String?
+  audioUrl        String?
+  createdAt       DateTime @default(now())
+
+  userCharacter UserCharacter @relation(fields: [userCharacterId], references: [id])
+
+  @@index([userCharacterId, createdAt])
+}
+
+model UserProfile {
+  id              String   @id @default(cuid())
+  userCharacterId String
+  key             String
+  value           String   @db.Text
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  userCharacter UserCharacter @relation(fields: [userCharacterId], references: [id])
+
+  @@unique([userCharacterId, key])
+  @@index([userCharacterId])
+}
+
+model AffinityLog {
+  id              String   @id @default(cuid())
+  userCharacterId String
+  delta           Int
+  reason          String
+  triggers        String[]
+  affinityBefore  Int
+  affinityAfter   Int
+  createdAt       DateTime @default(now())
+
+  userCharacter UserCharacter @relation(fields: [userCharacterId], references: [id])
+
+  @@index([userCharacterId, createdAt])
+}

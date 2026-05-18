@@ -1,0 +1,419 @@
+SKILL.md（v1.2 完整版）
+
+# 纸片人男友 2.0 — 项目专属 Skill
+
+> 本文件为 TRAE 在本项目中协助编码时必须遵循的"上岗 SOP"。每次生成、修改、重构代码，均须严格遵守本文档的约定。如遇本文档未覆盖的情况，应在动手前向开发者确认，而非自行假设。
+
+---
+
+## 一、项目概述
+
+- **项目名称**：纸片人男友 2.0（Paper Boyfriend 2.0）
+- **项目性质**：AI 虚拟陪伴类 Web 产品
+- **核心定位**：内置 6 位差异化人设的虚拟男友，提供有真实性格、外貌一致、可记忆陪伴、关系可演进的对话体验
+- **目标用户**：希望获得情感陪伴体验的成年用户
+- **开发环境**：本地 TRAE 开发，GitHub 托管，Vercel 部署
+- **关键差异点**：相比 1.0 版本，本项目全部使用外部 API，强调人设深度、长期记忆、角色照片一致性、多角色切换、关系动态演进
+
+---
+
+## 二、技术栈（固定，不要擅自更换）
+
+### 2.1 前端与框架
+- **框架**：Next.js 16+（App Router）
+- **语言**：TypeScript（严格模式 `strict: true`）
+- **样式**：Tailwind CSS
+- **UI 组件库**：shadcn/ui（按需引入）
+- **图标**：lucide-react
+- **状态管理**：优先 React Server Components + Server Actions；客户端状态使用 React hooks，必要时引入 Zustand
+
+### 2.2 后端与数据
+- **运行时**：Next.js Route Handlers / Server Actions
+- **数据库**：PostgreSQL（Neon 或 Vercel Postgres）
+- **ORM**：Prisma
+- **文件存储**：Vercel Blob（用于角色基准照片与生成照片）
+
+### 2.3 认证
+- **方案**：自建邮箱注册登录（必须实现）
+- **密码加密**：bcrypt（salt rounds = 10）
+- **会话**：基于 HTTP-only Cookie 的 Session（推荐 `iron-session` 或 `jose`）
+- **进阶可选**：BetterAuth 接入 Google 登录
+
+### 2.4 外部 API
+- **LLM 对话**：OpenAI GPT-4o / Anthropic Claude / DeepSeek（任选其一，通过环境变量切换）
+- **LLM 情绪分析**：小模型（GPT-4o-mini / Claude Haiku / DeepSeek-Chat），与对话 LLM 解耦配置
+- **LLM 记忆抽取**：同上，小模型
+- **图像生成（图生图）**：seedream-5 或 nano banana 2（**对话中所有照片必须使用图生图**）
+- **基准照片生成（文生图）**：seedream-5 或 nano banana 2 的文生图模式（仅 seed 阶段生成 6 张基准照片）
+- **TTS（可选）**：ElevenLabs / Minimax / OpenAI TTS
+- **邮件（挑战项）**：Resend
+- **定时任务（挑战项）**：Vercel Cron
+
+### 2.5 开发工具
+- **包管理**：pnpm
+- **代码格式**：Prettier
+- **代码检查**：ESLint（Next.js 推荐配置）
+- **Git Hooks**：husky + lint-staged
+
+---
+
+## 三、目录结构约定
+
+
+paper-boyfriend-2/ ├── .trae/ │ └── skills/ │ └── project.md ├── docs/ │ ├── characters.md # 6 位角色完整人设（权威来源） │ ├── affinity-system.md # 情感系统设计（权威来源） │ ├── api-notes.md # 外部 API 调试笔记 │ └── postman/ # Postman Collection 导出 ├── prisma/ │ ├── schema.prisma │ └── seed.ts # 写入 6 位角色 + 生成基准照片 + 写入情感参数 ├── public/ ├── src/ │ ├── app/ │ │ ├── (auth)/ # 登录、注册 │ │ ├── (main)/ │ │ │ ├── characters/ # 角色选择 / 角色详情 │ │ │ ├── chat/[characterId]/ │ │ │ └── settings/ │ │ ├── api/ # Route Handlers │ │ └── layout.tsx │ ├── components/ │ │ ├── ui/ # shadcn/ui 组件 │ │ ├── character/ # 角色卡片、详情等 │ │ └── chat/ # 对话气泡、输入框等 │ ├── lib/ │ │ ├── auth/ │ │ ├── db/ │ │ ├── ai/ │ │ │ ├── llm.ts # 对话 LLM 调用封装 │ │ │ ├── llm-small.ts # 情绪分析 / 记忆抽取小模型封装 │ │ │ ├── image.ts # 图生图（对话中使用） │ │ │ ├── image-seed.ts # 文生图（仅 seed 阶段） │ │ │ └── tts.ts │ │ ├── prompts/ │ │ │ ├── system.ts # 系统 Prompt（带角色 + 情感状态变量） │ │ │ ├── memory.ts # 记忆抽取 Prompt │ │ │ ├── emotion.ts # 情绪分析 Prompt │ │ │ └── image.ts # 图生图描述词模板 │ │ ├── characters/ # 角色数据查询封装 │ │ ├── memory/ # 用户画像读写 │ │ └── affinity/ # 情感系统：阶段判定、加权、概率门、日志 │ ├── types/ │ └── styles/ ├── .env.example ├── .env.local ├── .gitignore ├── README.md └── SKILL.md
+
+
+
+**约定：**
+- 业务模块按"功能域"组织
+- `src/lib/ai/` 下每个外部 AI 能力封装为独立模块，对外暴露统一接口
+- Prompt 文件统一放在 `src/lib/prompts/`，所有 Prompt 必须支持变量注入
+- 情感系统的核心逻辑统一放在 `src/lib/affinity/`，业务代码不允许直接操作 `affinity` 字段
+
+---
+
+## 四、内置 6 位角色
+
+> 完整人设见 `docs/characters.md`。下表为编码时快速参考。**所有 6 位角色在首版全部开放，无需付费或解锁逻辑**。
+
+| ID | 姓名 | 年龄 | 职业 | 人设标签 | 主题色 |
+|---|---|---|---|---|---|
+| `lin-yu` | 林屿 | 26 | 独立游戏开发者 | 温柔内敛 · 理性 · 微傲娇 | `#7B8FA1` |
+| `gu-zhao` | 顾昭 | 32 | 心外科医生 | 成熟稳重 · 沉静可靠 · 占有欲 | `#2C3E50` |
+| `chen-mu` | 陈牧 | 23 | 大学生 / 乐队主唱 | 阳光开朗 · 黏人 · 撒娇 | `#F4A261` |
+| `bai-ye` | 白夜 | 28 | 古籍修复师 | 文艺安静 · 慢热 · 温润 | `#A68A64` |
+| `huo-li` | 霍砺 | 30 | 退役特种兵 / 安保 CEO | 霸道强势 · 话少 · 占有欲极强 | `#1A1A1A` |
+| `xia-zhi` | 夏知 | 25 | 烘焙师 / 甜品店老板 | 软甜治愈 · 体贴细心 · 暖男 | `#F7C8A8` |
+
+每位角色在数据库中包含的关键字段：
+- `appearancePrompt`：外貌锚点描述（图生图必传）
+- `baselineImageUrl`：基准照片 URL
+- `speakingStyle` / `habits` / `loveThreshold`：注入系统 Prompt
+- `themeColor`：聊天界面主题色
+- `initialAffinity` / `affinityGainRate` / `affinityLossRate` / `thawThreshold` / `jealousyFactor`：情感系统参数
+
+---
+
+## 五、系统 Prompt 编写规范
+
+### 5.1 结构要求
+系统 Prompt 由 `buildSystemPrompt(character, userProfile, userName, affinity)` 动态生成，固定包含 9 个部分，顺序如下：
+
+1. **身份声明**：基于角色姓名、年龄、职业、城市
+2. **成长背景**：来自 `character.background`
+3. **性格与说话风格**：来自 `character.speakingStyle`
+4. **行为偏好**：来自 `character.habits`
+5. **"我爱你"门槛**：根据 `character.loveThreshold` 字段映射
+6. **用户画像注入**：动态拼接当前 `userCharacterId` 下的全部画像键值对
+7. **当前情感状态**：根据 affinity 数值判定阶段，注入对应行为约束（详见第八节）
+8. **行为边界**：固定不变（不承认是 AI、不跳出角色、敏感话题处理）
+9. **回复格式约定**：纯文本回复；需发照片时输出 `[SEND_PHOTO: 场景描述]` 标记
+
+### 5.2 编写禁忌
+- 严禁随手编写 Prompt，必须基于 `docs/characters.md` 与 `docs/affinity-system.md` 中的字段
+- 严禁在 Prompt 中使用"你是一个 AI 助手"等破坏沉浸感的措辞
+- 严禁让角色主动声明自己是 AI 或程序
+- 严禁在 Prompt 中硬编码某一位角色的信息——所有内容必须通过参数注入
+- 严禁让角色在对话中提及"好感度""阶段""数值"等系统术语
+
+---
+
+## 六、图像生成（图生图）规范
+
+### 6.1 核心原则
+- **对话过程中所有照片必须使用图生图**，不允许使用纯文生图
+- 每次生图必须传入当前角色的基准照片作为参考图
+- 基准照片在 seed 阶段一次性生成，URL 存储在 `Character.baselineImageUrl`
+
+### 6.2 基准照片生成（仅 seed 阶段）
+- 使用文生图 API（`src/lib/ai/image-seed.ts`），按每位角色的 `appearancePrompt` 生成 1 张高质量人物肖像
+- 生成参数建议：竖版 3:4 或 2:3，分辨率 ≥ 1024px
+- 生成结果上传至 Vercel Blob，URL 写回数据库
+- seed 脚本应支持幂等：若已存在基准照片则跳过
+
+### 6.3 对话中图生图调用流程
+1. LLM 输出中检测到 `[SEND_PHOTO: 场景描述]` 标记
+2. **经过"情感概率门"判定**（详见第八节）——决定是否真正执行图生图
+3. 从数据库读取当前角色的 `baselineImageUrl` 与 `appearancePrompt`
+4. 按模板拼接最终 Prompt
+5. 调用图生图 API，传入基准照片 URL + 拼接后的 Prompt
+6. 生成结果上传至 Vercel Blob，记录到 `Message` 表
+
+### 6.4 固定描述词模板
+
+
+[角色外貌描述（来自 character.appearancePrompt）]
+
+
+Scene: [场景描述（LLM 输出）]
+
+
+Style: cinematic photography, soft natural light, shallow depth of field, warm color tone, photorealistic, 35mm film aesthetic.
+
+
+Quality: high detail, sharp focus, professional photography, no distortion, no extra limbs, no text, no watermark.
+
+
+
+每位角色的外貌锚点（appearancePrompt）已在 `docs/characters.md` 固定，不允许在调用时临时修改。
+
+---
+
+## 七、记忆功能规范
+
+### 7.1 用户画像表结构
+
+```prisma
+model UserProfile {
+  id               String   @id @default(cuid())
+  userCharacterId  String
+  key              String
+  value            String   @db.Text
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+  
+  userCharacter    UserCharacter @relation(fields: [userCharacterId], references: [id])
+  
+  @@unique([userCharacterId, key])
+  @@index([userCharacterId])
+}
+
+关键设计：记忆挂在 UserCharacter（用户-角色关系）上，而非直接挂在 User 上。用户对林屿透露的事情，霍砺不应该知道。
+
+
+7.2 记忆写入
+
+每轮对话结束后异步触发（不阻塞用户回复）
+调用小模型 LLM 使用 src/lib/prompts/memory.ts 中的抽取 Prompt
+输出严格 JSON：[{ "key": "生日", "value": "3月15日" }, ...]
+同一 key 已存在时更新，不存在时插入
+
+7.3 记忆读取
+
+每次对话发起前查询当前 userCharacterId 下全部画像
+拼接为自然语言段落注入系统 Prompt 的"用户画像注入"部分
+
+
+八、情感系统规范
+
+8.1 核心机制
+
+每位用户与每位角色独立维护一个 affinity 数值（0-100，整数）
+5 档阶段：疏离期（0-19）/ 冷淡期（20-39）/ 平稳期（40-59）/ 亲密期（60-79）/ 热恋期（80-100）
+情感系统通过两个通道作用于角色（MVP 阶段同时上线）：
+通道 A：注入系统 Prompt 的"当前情感状态"段落
+通道 B：照片概率门，控制 [SEND_PHOTO] 标记是否真正执行
+
+8.2 触发时机
+
+每轮对话结束后异步触发（与记忆抽取并行）
+不阻塞用户消息回复
+使用小模型（GPT-4o-mini / Claude Haiku / DeepSeek-Chat）执行情绪分析
+
+8.3 加权计算
+
+最终 delta = 
+  if (rawDelta > 0)  rawDelta * character.affinityGainRate
+  if (rawDelta < 0)  rawDelta * character.affinityLossRate
+  if (triggers 包含 "提到他人")  额外乘以 character.jealousyFactor
+
+newAffinity = clamp(currentAffinity + 最终delta, 0, 100)
+
+8.4 防刷分约束
+
+单轮对话 delta 绝对值不超过 ±5
+写入数据库前必须 Math.max(0, Math.min(100, value)) clamp
+必须同步写入 AffinityLog
+
+8.5 通道 B：照片概率门
+
+后端解析 LLM 输出的 [SEND_PHOTO: ...] 标记时，按当前阶段决定是否真正执行图生图：
+
+
+阶段	照片发送概率
+疏离期（0-19）	0%（强制屏蔽）
+冷淡期（20-39）	20%
+平稳期（40-59）	70%
+亲密期（60-79）	90%
+热恋期（80-100）	100%
+
+概率门在 src/lib/affinity/ 模块中实现，与 LLM 输出解耦。
+
+
+8.6 UI 展示约束
+
+永远不在 UI 上展示 affinity 数值或阶段名称
+永远不在设置页展示"关系状态"文字
+情感系统的所有效果只通过角色行为体现
+
+8.7 模块封装
+
+情感系统的核心逻辑统一放在 src/lib/affinity/
+业务代码不允许直接读写 UserCharacter.affinity 字段，必须通过封装函数
+必须提供的封装函数：
+getAffinityStage(value: number): Stage
+buildAffinitySection(character, affinity, userName): string
+shouldSendPhoto(affinity: number): boolean
+updateAffinity(userCharacterId, userMsg, assistantMsg): Promise<void>
+
+
+九、外部 API 接入规范
+
+9.1 强制流程
+
+任何外部 API 在写代码前，必须先在 Postman 中验通：
+
+
+请求 URL、Method、Headers、Body 四要素已确认
+入参、出参格式已明确
+错误码与异常情况已了解
+Postman Collection 保存至 docs/postman/ 目录
+
+本项目至少需要验证：
+
+
+对话 LLM 接口
+小模型 LLM 接口（情绪分析 + 记忆抽取共用）
+图生图接口（对话中使用）
+文生图接口（seed 阶段生成基准照片）
+TTS 接口（如做语音进阶项）
+
+9.2 封装规范
+
+每个外部 API 在 src/lib/ai/ 下封装为独立模块
+对外只暴露语义化函数（例如 generateImageFromBase(characterId, scene)），隐藏 HTTP 细节
+必须包含：超时控制、错误重试（最多 2 次）、错误日志、类型定义
+严禁在业务代码中直接 fetch 外部 API
+
+9.3 环境变量管理
+
+所有密钥、URL 必须通过环境变量配置
+.env.example 维护变量清单（不含真实值），提交到仓库
+.env.local 仅存于本地，必须在 .gitignore 中
+线上密钥在 Vercel 项目设置中配置
+
+
+十、角色选择与切换交互约定
+
+10.1 首次进入
+
+用户注册登录后，跳转至 /characters 角色选择页
+页面展示 6 张角色卡片：头像、姓名、年龄、职业、一句话简介、人设标签
+点击卡片进入 /characters/[id] 详情页：展示完整人设介绍 + 基准照片
+点击"开始相处"按钮 → 在 UserCharacter 表中创建关系（affinity 初始化为 character.initialAffinity） → 跳转至 /chat/[characterId]
+
+10.2 多角色切换
+
+设置页提供"我的角色"入口，列出用户已建立关系的所有角色
+切换不删除任何对话历史
+每个角色独立保存：消息记录、用户画像、好感度
+设置页不展示任何关系状态文字或数值
+
+10.3 视觉差异化
+
+每位角色有独立的 themeColor，切换角色后聊天界面强调色随之变化
+对话气泡、按钮、加载动画等吸收角色主题色
+
+
+十一、代码风格约定
+
+11.1 命名
+
+文件名：小写连字符（character-card.tsx）；React 组件文件可用大驼峰（CharacterCard.tsx），项目内保持统一
+变量、函数：小驼峰（getCharacterById）
+类型、接口、组件：大驼峰（Character、UserCharacter）
+常量：全大写下划线（MAX_RETRY_COUNT）
+数据库表：单数大驼峰（User、Character）
+
+11.2 TypeScript
+
+严格模式开启，禁止使用 any（必要时 unknown + 类型守卫）
+所有函数参数与返回值显式声明类型
+外部 API 入参出参必须定义独立 Type/Interface
+
+11.3 React 与 Next.js
+
+优先使用 Server Components；只有需要交互时才用 "use client"
+数据获取优先 Server Components 或 Server Actions
+表单提交优先 Server Actions
+
+11.4 错误处理
+
+所有外部 API 调用必须 try/catch
+错误必须有结构化日志
+用户可见的错误信息友好，不暴露内部细节
+情绪分析 / 记忆抽取的异步失败不允许影响主对话流程
+
+11.5 注释
+
+仅在"为什么这么写"不直观时添加
+复杂的 Prompt 拼接必须配套注释说明每个部分作用
+情感系统的加权计算、概率门必须有注释
+
+
+十二、Git 提交规范
+
+12.1 Commit Message
+
+采用 Conventional Commits：
+
+
+<type>(<scope>): <subject>
+
+type：feat / fix / refactor / style / docs / chore / test
+
+
+示例：
+
+
+feat(character): 实现角色选择页与详情页
+feat(seed): 通过文生图 API 批量生成 6 位角色基准照片
+feat(affinity): 实现情绪分析与好感度加权计算
+feat(affinity): 接入照片概率门
+fix(chat): 修复切换角色后 themeColor 未更新
+docs(characters): 完善霍砺的成长背景
+
+12.2 分支策略
+
+main：稳定分支，对应 Vercel 生产环境
+feat/xxx：临时功能分支，合并后删除
+
+12.3 提交粒度
+
+一次提交只做一件事
+不允许混合无关变更
+
+
+十三、安全与合规
+
+所有 API Key 严禁硬编码
+密码必须 bcrypt 加密
+所有数据库查询使用 Prisma 参数化查询
+用户隐私字段（如 email）在日志中必须脱敏
+角色不能讨论政治、暴力、违法、色情等敏感话题（在系统 Prompt 中明确约束）
+情感系统的 affinity 数值不允许通过任何 API 暴露给前端
+上线前必须包含基本的服务条款与隐私声明页面
+
+
+十四、编码协作约定（TRAE 须遵守）
+
+不要跳过 Postman 验证。若用户尚未提供 API 验证结果，应主动询问。
+不要擅自更换技术栈。
+不要随手写 Prompt。涉及角色对话、记忆抽取、情绪分析的 Prompt，必须基于 docs/characters.md 与 docs/affinity-system.md。
+不要使用纯文生图（除 seed 阶段外）。对话中所有照片必须基于图生图。
+不要硬编码角色信息到业务代码。所有角色数据必须从数据库读取。
+不要在 UI 暴露 affinity 数值或阶段。
+不要让情感系统阻塞主对话流程。情绪分析必须异步。
+遵循目录结构。
+生成代码前先解释思路。重要功能（认证、记忆、图生图、Prompt 设计、角色 seed、情感系统）先用简短文字说明，确认后再编码。
+小步迭代。按"必须实现的功能"顺序推进，单次产出聚焦一个模块。
+每个模块完成后提示提交。
+
+
+十五、版本
+
+Skill 版本：v1.2
+更新内容：
+v1.0 → v1.1：新增 6 位内置角色系统、基准照片生成方案、多角色切换、记忆按角色隔离
+v1.1 → v1.2：新增情感系统规范（5 档阶段、双通道作用、照片概率门、不在 UI 展示）；新增小模型 LLM 封装约定；目录结构增加 src/lib/affinity/ 模块
+维护策略：技术栈、目录结构、角色定义、情感系统的重大变更必须同步修改本文件

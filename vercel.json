@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/affinity-decay",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/daily-love",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/recall",
+      "schedule": "0 10 * * *"
+    }
+  ]
+}

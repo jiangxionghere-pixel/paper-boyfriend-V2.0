@@ -1,0 +1,402 @@
+纸片人男友 2.0 — 产品规格说明书 SPEC（v1.2）
+
+项目名称 纸片人男友 2.0（Paper Boyfriend 2.0）
+
+"纸片人男友 2.0" 是一款以角色陪伴为核心的轻量级 Web 产品。用户注册后，可以与一位有固定人设、有记忆、有视觉一致性、有情绪起伏的虚拟男友进行长期对话。它不是一个聊天机器人，而是一个让用户愿意每天打开的情感陪伴产品，无限接近真人聊天陪伴的高品质产品。最终交付一个真实可访问、可注册、内置 6 位差异化角色、可持续陪伴用户、关系可动态演进的完整产品。
+
+一、技术栈与基础架构要求
+
+
+1.1 开发环境
+
+
+开发工具：TRAE（本地开发环境）
+代码托管：GitHub（写第一行代码之前必须先建好仓库）
+部署平台：Vercel（硬性要求，必须产出真实可访问的线上链接）
+
+1.2 技术栈
+
+
+前端：Next.js 16+（App Router）+ React + TypeScript
+样式：Tailwind CSS + shadcn/ui
+数据库：PostgreSQL（推荐 Neon 或 Vercel Postgres）
+ORM：Prisma
+认证：自建邮箱注册登录系统（必须），BetterAuth 接入社交登录（进阶可选）
+文件存储：Vercel Blob
+
+1.3 项目专属 Skill 文件，用于让 TRAE 在后续编码过程中自动遵循约定。
+
+
+1.4 API 验证流程 所有外部 API 在接入代码之前，必须先在 Postman 中完成验证，保存为 Postman Collection 导出至 docs/postman/。先 Postman 验货，再写代码，不允许跳过。
+
+
+二、必须实现的功能（核心需求）
+
+
+2.1 全部使用外部 API
+
+
+不依赖任何扣子编程内置 API
+LLM 对话、LLM 情绪分析、LLM 记忆抽取、图像生成（基准照片文生图 + 对话照片图生图）、TTS 等全部接入外部第三方 API，所有 API Key 通过环境变量管理；.env.local 加入 .gitignore
+
+2.2 用户登录系统
+
+
+必须实现：
+
+
+邮箱注册（邮箱 + 密码）
+邮箱登录
+密码 bcrypt 加密存储
+Session / Token 管理（HTTP-only Cookie）
+受保护路由：未登录用户无法进入角色选择和对话界面
+用户表记录基础信息
+
+进阶可选：
+
+使用 BetterAuth 接入 Google 登录
+
+2.3 内置 6 位角色系统
+
+
+2.3.1 角色清单 首版内置以下 6 位角色，全部默认开放，无解锁门槛：
+
+
+lin-yu　林屿　26 岁　独立游戏开发者　温柔内敛 · 理性 · 微傲娇
+gu-zhao　顾昭　32 岁　心外科医生　成熟稳重 · 沉静可靠 · 占有欲
+chen-mu　陈牧　23 岁　大学生 / 乐队主唱　阳光开朗 · 黏人 · 撒娇
+bai-ye　白夜　28 岁　古籍修复师　文艺安静 · 慢热 · 温润
+huo-li　霍砺　30 岁　退役特种兵 / 安保 CEO　霸道强势 · 话少 · 占有欲极强
+xia-zhi　夏知　25 岁　烘焙师 / 甜品店老板　软甜治愈 · 体贴细心 · 暖男
+
+每位角色的完整人设见独立文档 docs/characters.md。
+
+
+2.3.2 前置要求：人设文档 在动手写代码之前，必须先确认 docs/characters.md 中 6 位角色的完整设定。任何角色相关的代码（Prompt 生成、Seed 脚本、UI 展示）都必须以该文档为唯一来源。
+
+
+2.3.3 角色选择与切换
+
+
+注册登录后，跳转至角色选择页 /characters，以卡片形式展示 6 位角色
+点击卡片进入角色详情页 /characters/[id]，展示完整人设介绍 + 基准照片
+点击"开始相处"创建 UserCharacter 记录（affinity 初始化为该角色的 initialAffinity），跳转至 /chat/[characterId]
+设置页提供"我的角色"入口，支持在多个角色间切换
+切换角色不删除任何对话历史；每个角色独立保留消息记录、用户画像、好感度
+聊天界面主题色随当前角色 themeColor 动态变化
+设置页与对话页均不展示任何关系状态、好感度数值、阶段名称
+
+2.4 认真设计的对话逻辑
+
+
+2.4.1 系统 Prompt
+
+
+通过 buildSystemPrompt(character, userProfile, userName, affinity) 动态生成
+包含 9 个固定部分：身份声明、成长背景、性格与说话风格、行为偏好、"我爱你"门槛、用户画像注入、当前情感状态、行为边界、回复格式约定
+严禁随手编写或硬编码具体角色信息
+严禁让角色提及"好感度""阶段"等系统术语
+
+2.4.2 对话接口
+
+
+用户消息 → 后端调用 LLM API → 返回角色回复
+回复支持文字消息
+在合适语境下，LLM 在回复末尾输出 [SEND_PHOTO: 场景描述] 标记，后端先经过情感概率门判定，再决定是否触发图生图流程
+
+2.5 角色一致性的照片（图生图）
+
+
+2.5.1 基准照片生成（Seed 阶段一次性）
+
+
+使用文生图 API，根据每位角色的 appearancePrompt 生成 1 张高质量肖像
+生成结果上传至 Vercel Blob，URL 写入 Character.baselineImageUrl
+Seed 脚本支持幂等：已存在基准照片的角色跳过
+推荐使用 seedream-5 或 nano banana 2
+
+2.5.2 对话中图生图（每次发照片）
+
+
+必须使用图生图，不允许使用纯文生图
+每次生图传入对应角色的基准照片作为参考图
+Prompt 模板固定：[角色外貌描述] + [场景描述] + [风格约束] + [质量约束]
+风格约束与质量约束在 Skill 文件中固定，不允许调用时临时修改
+
+2.5.3 API 选型
+
+
+推荐首选：seedream-5 或 nano banana 2
+必须先在 Postman 中调通图生图与文生图两套接口
+
+2.6 记忆功能
+
+
+2.6.1 设计要点
+
+
+记忆按"用户-角色"维度隔离：用户对林屿透露的事情，霍砺不应该知道
+数据库中 UserProfile 表关联到 UserCharacter，而非直接到 User
+
+2.6.2 写入逻辑
+
+
+每轮对话结束后异步触发（不阻塞用户回复）
+使用小模型 LLM 分析该轮对话，判断是否透露关键信息
+输出严格 JSON 格式，写入或更新 UserProfile
+
+2.6.3 读取逻辑
+
+
+每次对话发起前查询当前 userCharacterId 下的全部画像
+拼接为自然语言段落注入系统 Prompt
+
+2.6.4 进阶可选
+
+
+借助 GitHub 上成熟的开源记忆类库（mem0、Letta 等）
+
+2.7 情感系统（MVP 必须实现）
+
+
+2.7.1 设计要点
+
+
+每位用户与每位角色独立维护一个 affinity 数值（0-100）
+5 档阶段：疏离期（0-19）/ 冷淡期（20-39）/ 平稳期（40-59）/ 亲密期（60-79）/ 热恋期（80-100）
+6 位角色的情感参数（initialAffinity / gainRate / lossRate / thawThreshold / jealousyFactor）见 docs/affinity-system.md
+
+2.7.2 双通道作用机制（MVP 同时上线）
+
+
+通道 A：系统 Prompt 注入 —— 根据当前阶段，向系统 Prompt 注入"当前情感状态"段落，让角色行为随阶段动态调整
+通道 B：照片概率门 —— 后端解析 [SEND_PHOTO] 标记时按阶段判定是否真正执行图生图： 疏离期 0% / 冷淡期 20% / 平稳期 70% / 亲密期 90% / 热恋期 100%
+
+2.7.3 写入逻辑
+
+
+每轮对话结束后异步触发（与记忆抽取并行）
+使用小模型 LLM 进行情绪分析，输出 delta（-5 到 +5）、reason、triggers
+按角色 gainRate / lossRate / jealousyFactor 加权后写入 UserCharacter.affinity
+同步写入 AffinityLog 用于调试
+
+2.7.4 防刷分约束
+
+
+单轮 delta 绝对值不超过 ±5
+数值写入前必须 clamp 到 0-100
+同类触发场景在同一日内累积上涨上限 +10
+
+2.7.5 UI 展示约束
+
+
+永远不在 UI 上展示 affinity 数值或阶段名称
+情感系统的所有效果只通过角色行为体现
+
+2.8 部署上线
+
+
+代码托管 GitHub，commit 历史清晰
+部署 Vercel，提供公开可访问链接
+正确配置环境变量、数据库连接、构建脚本
+Seed 脚本在首次部署后执行一次，生成 6 张基准照片并写入数据库
+
+三、进阶项（有余力则实现）
+
+
+3.1 语音功能（TTS）
+
+
+接入外部 TTS API（ElevenLabs、Minimax、火山引擎、OpenAI TTS 等）
+角色回复支持声音输出
+每位角色可配置不同的音色（在 Character 表新增 voiceId 字段）
+必须先 Postman 验通
+
+3.2 对话历史回顾
+
+
+用户可翻看与每位角色的完整聊天记录
+按时间线倒序排列
+必须实现分页查询
+时间线 UI 有合理的日期分组与视觉层次
+
+3.3 独立域名
+
+
+在 Namecheap 或阿里云购买独立域名
+Vercel 绑定域名并配置 DNS
+全站 HTTPS
+
+3.4 BetterAuth 社交登录
+
+
+接入 Google 或其他主流社交平台一键登录
+
+3.5 情感系统增强（阶段 2）
+
+
+阶段升级 / 降级事件：当 affinity 跨越阶段边界时，在 UserCharacter.pendingStageTransition 写入标记，下一次对话时由系统 Prompt 注入一次性"关系变化"提示，让角色自然表现出关系演进的微妙细节
+
+四、挑战项（高阶可选）
+
+
+4.1 角色主动发消息
+
+
+Vercel Cron 定时触发
+Resend 邮件 API 发送提醒邮件，文案贴合当前角色人设
+邮件包含返回对话的链接
+设计合理触发策略，避免骚扰
+
+4.2 情感系统增强（阶段 3）：日衰减机制
+
+
+连续 7 天以上未对话，每日扣 1 点 affinity
+单次连续不对话导致的衰减不超过 15 点
+由 Cron Job 每日扫描执行
+可与"角色主动发消息"联动：优先给高好感度用户发送提醒，避免好感度衰减
+
+4.3 分享卡片功能
+
+
+选择某段对话或某张照片生成可分享图片
+推荐 satori / @vercel/og 实现
+卡片需有美观排版，体现当前角色主题色
+
+
+
+五、数据库结构（必须实现）
+
+
+model User { id String @id @default(cuid()) email String @unique passwordHash String name String? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt
+
+
+userCharacters UserCharacter[] }
+
+
+model Character { id String @id // "lin-yu" 等 name String nameEn String age Int occupation String city String mbti String tagline String // 一句话简介 personalityTags String[] // ["温柔", "理性", "微傲娇"]
+
+
+background String @db.Text speakingStyle String @db.Text habits String @db.Text loveThreshold String // low/medium/high/extreme
+
+
+appearancePrompt String @db.Text // 外貌锚点（图生图必传） baselineImageUrl String? // 基准照片 URL photoScenes String[] // 偏好拍照场景
+
+
+avatarUrl String? // 选角界面头像 themeColor String // 主题色 hex voiceId String? // TTS 音色 ID（进阶项）
+
+
+// 情感系统参数 initialAffinity Int @default(50) affinityGainRate Float @default(1.0) affinityLossRate Float @default(1.0) thawThreshold Int @default(60) jealousyFactor Float @default(1.0)
+
+
+isActive Boolean @default(true) sortOrder Int @default(0)
+
+
+createdAt DateTime @default(now()) updatedAt DateTime @updatedAt
+
+
+userCharacters UserCharacter[] }
+
+
+model UserCharacter { id String @id @default(cuid()) userId String characterId String
+
+
+affinity Int @default(50) pendingStageTransition String? // 阶段 2 使用 selectedAt DateTime @default(now()) lastChatAt DateTime?
+
+
+user User @relation(fields: [userId], references: [id]) character Character @relation(fields: [characterId], references: [id])
+
+
+messages Message[] profiles UserProfile[] affinityLogs AffinityLog[]
+
+
+@@unique([userId, characterId]) @@index([userId]) }
+
+
+model Message { id String @id @default(cuid()) userCharacterId String role String // "user" / "assistant" content String @db.Text imageUrl String? audioUrl String? // 进阶项 createdAt DateTime @default(now())
+
+
+userCharacter UserCharacter @relation(fields: [userCharacterId], references: [id])
+
+
+@@index([userCharacterId, createdAt]) }
+
+
+model UserProfile { id String @id @default(cuid()) userCharacterId String key String value String @db.Text updatedAt DateTime @updatedAt createdAt DateTime @default(now())
+
+
+userCharacter UserCharacter @relation(fields: [userCharacterId], references: [id])
+
+
+@@unique([userCharacterId, key]) @@index([userCharacterId]) }
+
+
+model AffinityLog { id String @id @default(cuid()) userCharacterId String delta Int reason String triggers String[] affinityBefore Int affinityAfter Int createdAt DateTime @default(now())
+
+
+userCharacter UserCharacter @relation(fields: [userCharacterId], references: [id])
+
+
+@@index([userCharacterId, createdAt]) }
+
+
+六、开发前置三件事（强制执行顺序）
+
+
+在 TRAE 写第一行代码之前，必须完成：
+
+
+在 GitHub 建好仓库，从第一个 commit 起执行规范的代码管理。
+为项目编写专属 Skill 文档（v1.2），将技术栈、6 位角色摘要、图像生成模板、情感系统规范、代码风格约定全部写入。
+在 Postman 中验通每一个外部 API：对话 LLM、小模型 LLM（情绪分析 + 记忆抽取共用）、文生图（用于 seed）、图生图（用于对话）、TTS（如做进阶项）。确认入参出参，保存四要素后再写集成代码。
+
+顺序不可颠倒，不可跳过。
+
+
+七、推荐开发顺序
+
+
+基础设施：Next.js 项目初始化、Tailwind、shadcn/ui、ESLint、Prettier、GitHub 仓库、Vercel 项目绑定
+数据库与认证：Prisma schema（含情感字段与 AffinityLog 表）、邮箱注册登录、Session 管理
+角色 Seed：编写 prisma/seed.ts，调用文生图 API 生成 6 张基准照片，写入角色完整数据（含情感参数）
+角色选择 UI：角色列表页 + 详情页 + "开始相处"流程（创建 UserCharacter 时使用 initialAffinity 初始化）
+对话核心：系统 Prompt 拼接（含情感状态段落）、LLM 调用、消息存储、聊天 UI
+图生图集成：解析 [SEND_PHOTO] 标记、调用图生图 API、消息展示
+情感系统 MVP：
+实现 src/lib/affinity/ 模块（阶段判定、Prompt 段落生成、概率门、加权计算）
+编写 emotion.ts Prompt
+实现异步情绪分析与 AffinityLog 写入
+接入对话流程：构建 Prompt 时注入情感状态、解析 SEND_PHOTO 时经过概率门
+验证不同阶段下 6 位角色的表现差异
+记忆功能：抽取 Prompt、异步写入、读取注入
+多角色切换：设置页"我的角色"入口
+部署上线：Vercel 部署、环境变量、首次执行 seed
+进阶项 / 挑战项：按个人时间精力选做（含情感系统阶段 2 / 阶段 3 增强）
+
+八、交付物清单
+
+
+GitHub 仓库（含完整代码与提交历史）
+Vercel 线上可访问链接
+角色人设文档 docs/characters.md（6 位角色完整设定）
+情感系统设计文档 docs/affinity-system.md
+项目专属 Skill 文档 SKILL.md（v1.2）
+Postman Collection（导出文件，含全部外部 API 验证用例）
+README 文档（项目简介、本地启动方式、环境变量说明、部署说明、seed 执行说明）
+6 张已生成并上传至 Vercel Blob 的角色基准照片（数据库 URL 已就绪）
+
+九、验收标准
+
+
+用户能够通过邮箱完成注册和登录
+角色选择页能正常展示 6 位角色卡片
+角色详情页能展示完整人设介绍与基准照片
+用户能与任意角色建立关系并进入对话
+不同角色对话时，回复语气、用词、行为偏好有明显差异（符合各自人设）
+角色发送照片时，外貌与基准照片保持一致，且与场景描述匹配
+用户在不同角色处透露的关键信息相互隔离，且能在后续对话中被自然提及
+用户可在多个角色间切换，每个角色独立保留历史
+情感系统在后台正常运作： · AffinityLog 中能看到每轮对话产生的 delta 与触发标签 · 不同角色对同一种行为的反应有差异（验证 gainRate / lossRate / jealousyFactor 生效） · 持续积极互动后，角色行为有可感知的变化（更主动、更温柔、发照片更多） · 持续冷淡或负面互动后，角色行为有可感知的疏离感 · 疏离期角色绝不发照片，热恋期角色频繁发照片（概率门生效） · UI 上无任何关于好感度、阶段的展示
+全部 AI 能力（对话、文生图、图生图、情绪分析、记忆抽取）均由外部 API 提供
+产品已部署 Vercel，提供公开链接
+代码已托管 GitHub，提交历史清晰

@@ -1,0 +1,6 @@
+export { getAffinityStage, getStageConfig, STAGE_CONFIGS } from "./stages"
+export { buildAffinitySection } from "./prompt"
+export { shouldSendPhoto } from "./photo-gate"
+export { calculateWeightedDelta, clampAffinity } from "./weighting"
+export { updateAffinity } from "./update"
+export { applyDailyCap, updateDailyDelta } from "./daily-cap"
