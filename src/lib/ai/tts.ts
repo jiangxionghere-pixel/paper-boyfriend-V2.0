@@ -7,7 +7,44 @@ const TTS_APP_ID = process.env.TTS_APP_ID || ""
  *
  * 请求路径: https://openspeech.bytedance.com/api/v3/tts/unidirectional
  * 资源ID: seed-tts-2.0 (与 speaker 音色ID匹配)
+ *
+ * 音色ID映射规则：
+ * - seed-tts-1.0 音色后缀: _mars_bigtts
+ * - seed-tts-2.0 音色后缀: _uranus_bigtts
+ * - 如果传入 1.0 音色，自动转换为对应的 2.0 音色
  */
+
+// 1.0 -> 2.0 音色映射表
+const VOICE_ID_MAP: Record<string, string> = {
+  // 1.0 音色 -> 2.0 音色
+  "zh_male_mars_bigtts": "zh_male_m191_uranus_bigtts",
+  "zh_male_yangguangqingnian_emo_v2_mars_bigtts": "zh_male_m191_uranus_bigtts",
+  "zh_female_mars_bigtts": "zh_female_vv_uranus_bigtts",
+}
+
+function resolveVoiceId(voiceId?: string): string {
+  if (!voiceId) return "zh_male_m191_uranus_bigtts"
+
+  // 如果已经是 2.0 音色，直接使用
+  if (voiceId.includes("_uranus_bigtts")) {
+    return voiceId
+  }
+
+  // 如果在映射表中，转换
+  if (VOICE_ID_MAP[voiceId]) {
+    process.stderr.write(`[TTS] Voice ID mapped: ${voiceId} -> ${VOICE_ID_MAP[voiceId]}\n`)
+    return VOICE_ID_MAP[voiceId]
+  }
+
+  // 如果是 1.0 音色但不在映射表中，尝试自动替换后缀
+  if (voiceId.includes("_mars_bigtts")) {
+    const mapped = voiceId.replace("_mars_bigtts", "_uranus_bigtts")
+    process.stderr.write(`[TTS] Voice ID auto-mapped: ${voiceId} -> ${mapped}\n`)
+    return mapped
+  }
+
+  return voiceId
+}
 
 export async function textToSpeech(
   text: string,
@@ -15,15 +52,18 @@ export async function textToSpeech(
 ): Promise<string | null> {
   // 使用 stderr 确保日志在 Vercel 中可见
   process.stderr.write(`[TTS] Checking config: hasApiKey=${!!TTS_API_KEY}, hasAppId=${!!TTS_APP_ID}, apiKeyLength=${TTS_API_KEY?.length || 0}\n`)
-  
+
   if (!TTS_API_KEY || !TTS_APP_ID) {
     process.stderr.write("[TTS] API key or App ID not configured, skipping\n")
     return null
   }
 
+  // 解析并转换音色ID
+  const resolvedVoiceId = resolveVoiceId(voiceId)
+
   try {
-    process.stderr.write(`[TTS] Generating speech with voice: ${voiceId || "default"}\n`)
-    
+    process.stderr.write(`[TTS] Generating speech with voice: ${resolvedVoiceId}\n`)
+
     const response = await fetch(
       "https://openspeech.bytedance.com/api/v3/tts/unidirectional",
       {
@@ -40,7 +80,7 @@ export async function textToSpeech(
           },
           req_params: {
             text: text.slice(0, 500),
-            speaker: voiceId || "zh_male_m191_uranus_bigtts",
+            speaker: resolvedVoiceId,
             audio_params: {
               format: "mp3",
               sample_rate: 24000,
