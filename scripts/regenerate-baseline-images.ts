@@ -5,7 +5,7 @@
 
 import { PrismaClient } from "@prisma/client"
 import { textToImage } from "../src/lib/ai/image"
-import { uploadImageToR2 } from "../src/lib/storage/r2"
+import { uploadBufferToR2 } from "../src/lib/storage/r2"
 
 const prisma = new PrismaClient()
 
@@ -41,7 +41,7 @@ async function regenerateBaselineImages() {
       const buffer = Buffer.from(arrayBuffer)
 
       const fileName = `characters/baseline/${char.id}-${Date.now()}.png`
-      const uploadedUrl = await uploadImageToR2(buffer, fileName, "image/png")
+      const uploadedUrl = await uploadBufferToR2(buffer, fileName, "image/png")
 
       console.log(`   ✅ 上传成功: ${uploadedUrl.slice(0, 60)}...`)
 
