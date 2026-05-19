@@ -122,29 +122,24 @@ export async function POST(
 
     // Generate TTS audio after message is created (only if user enabled TTS)
     let audioUrl: string | null = null
-    console.log("[Chat] TTS Check:", { 
-      voiceId: character.voiceId, 
-      ttsEnabled: userCharacter.ttsEnabled,
-      hasVoiceId: !!character.voiceId,
-      hasTtsEnabled: userCharacter.ttsEnabled
-    })
+    process.stderr.write(`[Chat] TTS Check: voiceId=${character.voiceId}, ttsEnabled=${userCharacter.ttsEnabled}\n`)
     if (character.voiceId && userCharacter.ttsEnabled) {
       try {
-        console.log("[Chat] Generating TTS with voice:", character.voiceId)
+        process.stderr.write(`[Chat] Generating TTS with voice: ${character.voiceId}\n`)
         audioUrl = await textToSpeech(cleanContent.slice(0, 500), character.voiceId)
-        console.log("[Chat] TTS result:", audioUrl ? "Success" : "Failed")
+        process.stderr.write(`[Chat] TTS result: ${audioUrl ? "Success" : "Failed"}\n`)
         if (audioUrl) {
           await prisma.message.update({
             where: { id: assistantMessageRecord.id },
             data: { audioUrl },
           })
-          console.log("[Chat] TTS saved to message:", assistantMessageRecord.id)
+          process.stderr.write(`[Chat] TTS saved to message: ${assistantMessageRecord.id}\n`)
         }
       } catch (err) {
-        console.error("[TTS] Generation error:", err)
+        process.stderr.write(`[TTS] Generation error: ${err}\n`)
       }
     } else {
-      console.log("[Chat] TTS skipped - voiceId or ttsEnabled not available")
+      process.stderr.write("[Chat] TTS skipped - voiceId or ttsEnabled not available\n")
     }
 
     await prisma.userCharacter.update({
