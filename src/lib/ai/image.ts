@@ -27,7 +27,7 @@ export async function textToImage(prompt: string): Promise<string> {
     response_format: "url",
     size: "2K",
     stream: false,
-    watermark: true,
+    watermark: false,
   })
 
   return result.data[0].url
@@ -42,7 +42,7 @@ export async function imageToImage(baseImageUrl: string, prompt: string): Promis
     response_format: "url",
     size: "2K",
     stream: false,
-    watermark: true,
+    watermark: false,
   })
 
   return result.data[0].url
