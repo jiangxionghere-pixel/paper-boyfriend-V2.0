@@ -13,20 +13,16 @@ export async function textToSpeech(
   text: string,
   voiceId?: string
 ): Promise<string | null> {
-  console.log("[TTS] Checking config:", { 
-    hasApiKey: !!TTS_API_KEY, 
-    hasAppId: !!TTS_APP_ID,
-    apiKeyLength: TTS_API_KEY?.length,
-    appId: TTS_APP_ID
-  })
+  // 使用 stderr 确保日志在 Vercel 中可见
+  process.stderr.write(`[TTS] Checking config: hasApiKey=${!!TTS_API_KEY}, hasAppId=${!!TTS_APP_ID}, apiKeyLength=${TTS_API_KEY?.length || 0}\n`)
   
   if (!TTS_API_KEY || !TTS_APP_ID) {
-    console.log("[TTS] API key or App ID not configured, skipping")
+    process.stderr.write("[TTS] API key or App ID not configured, skipping\n")
     return null
   }
 
   try {
-    console.log(`[TTS] Generating speech with voice: ${voiceId || "default"}`)
+    process.stderr.write(`[TTS] Generating speech with voice: ${voiceId || "default"}\n`)
     
     const response = await fetch(
       "https://openspeech.bytedance.com/api/v3/tts/unidirectional",
@@ -56,14 +52,14 @@ export async function textToSpeech(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error(`[TTS] API error (${response.status}): ${errorText}`)
+      process.stderr.write(`[TTS] API error (${response.status}): ${errorText}\n`)
       return null
     }
 
     // 流式响应：读取所有 chunk 并提取音频数据
     const reader = response.body?.getReader()
     if (!reader) {
-      console.error("[TTS] No response body")
+      process.stderr.write("[TTS] No response body\n")
       return null
     }
 
@@ -84,7 +80,7 @@ export async function textToSpeech(
           const data = JSON.parse(line)
           // 检查业务错误码 (code 0 表示成功，20000000 表示结束)
           if (data.code !== undefined && data.code !== 0 && data.code !== 20000000) {
-            console.error(`[TTS] Business error [${data.code}]: ${data.message}`)
+            process.stderr.write(`[TTS] Business error [${data.code}]: ${data.message}\n`)
             return null
           }
           // 音频数据在 data 字段直接存放 (base64)
@@ -101,10 +97,10 @@ export async function textToSpeech(
       }
     }
 
-    console.log(`[TTS] Received ${chunkCount} chunks, audio length: ${audioBase64.length}`)
+    process.stderr.write(`[TTS] Received ${chunkCount} chunks, audio length: ${audioBase64.length}\n`)
 
     if (!audioBase64) {
-      console.log("[TTS] No audio data in response")
+      process.stderr.write("[TTS] No audio data in response\n")
       return null
     }
 
@@ -123,10 +119,10 @@ export async function textToSpeech(
       }
     )
 
-    console.log(`[TTS] Audio uploaded: ${url}`)
+    process.stderr.write(`[TTS] Audio uploaded: ${url}\n`)
     return url
   } catch (error) {
-    console.error("[TTS] Generation failed:", error)
+    process.stderr.write(`[TTS] Generation failed: ${error}\n`)
     return null
   }
 }
