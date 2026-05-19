@@ -123,16 +123,15 @@ export async function textToSpeech(
             process.stderr.write(`[TTS] Business error [${data.code}]: ${data.message}\n`)
             return null
           }
-          // 音频数据在 data 字段直接存放 (base64)
-          if (data.data && typeof data.data === "string") {
+          // 音频数据在 data 字段直接存放 (base64 字符串)
+          if (data.data && typeof data.data === "string" && data.data.startsWith("//OEx")) {
             audioBase64 += data.data
           }
-          // 也可能在 data.audio 中
-          if (data.data?.audio) {
-            audioBase64 += data.data.audio
-          }
         } catch {
-          // 非 JSON 行，忽略
+          // 非 JSON 行，可能是音频数据片段，尝试直接追加
+          if (line.startsWith("//OEx")) {
+            audioBase64 += line
+          }
         }
       }
     }
