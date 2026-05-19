@@ -2,11 +2,11 @@ const TTS_API_KEY = process.env.TTS_API_KEY || ""
 const TTS_APP_ID = process.env.TTS_APP_ID || ""
 
 /**
- * 豆包语音合成模型 2.0 - 单向流式 HTTP V3 API
+ * 豆包语音合成模型 - 单向流式 HTTP V3 API
  * 文档: https://www.volcengine.com/docs/6561/1329505
  *
  * 请求路径: https://openspeech.bytedance.com/api/v3/tts/unidirectional
- * 资源ID: seed-tts-2.0 (豆包语音合成模型2.0 字符版)
+ * 资源ID: seed-tts-1.0 (与 speaker 音色ID匹配)
  */
 
 export async function textToSpeech(
@@ -32,7 +32,7 @@ export async function textToSpeech(
           "Content-Type": "application/json",
           "X-Api-App-Id": TTS_APP_ID,
           "X-Api-Access-Key": TTS_API_KEY,
-          "X-Api-Resource-Id": "seed-tts-2.0",
+          "X-Api-Resource-Id": "seed-tts-1.0",
         },
         body: JSON.stringify({
           user: {
