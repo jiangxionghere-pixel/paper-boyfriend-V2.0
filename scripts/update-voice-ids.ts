@@ -2,13 +2,14 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
+// 豆包 TTS 2.0 支持的音色列表
 const VOICE_UPDATES = [
-  { id: "lin-yu", voiceId: "zh_male_m191_uranus_bigtts" },
-  { id: "gu-zhao", voiceId: "zh_male_m192_uranus_bigtts" },
-  { id: "chen-mu", voiceId: "zh_male_m193_uranus_bigtts" },
-  { id: "bai-ye", voiceId: "zh_male_m194_uranus_bigtts" },
-  { id: "huo-li", voiceId: "zh_male_m195_uranus_bigtts" },
-  { id: "xia-zhi", voiceId: "zh_male_m196_uranus_bigtts" },
+  { id: "lin-yu", voiceId: "zh_male_mars_bigtts" },
+  { id: "gu-zhao", voiceId: "zh_male_mars_bigtts" },
+  { id: "chen-mu", voiceId: "zh_male_mars_bigtts" },
+  { id: "bai-ye", voiceId: "zh_male_mars_bigtts" },
+  { id: "huo-li", voiceId: "zh_male_mars_bigtts" },
+  { id: "xia-zhi", voiceId: "zh_male_mars_bigtts" },
 ]
 
 async function updateVoiceIds() {
@@ -22,7 +23,7 @@ async function updateVoiceIds() {
     console.log(`✅ ${update.id} → ${update.voiceId}`)
   }
 
-  console.log("\n🎉 所有角色音色已更新为男声！")
+  console.log("\n🎉 所有角色音色已更新！")
   await prisma.$disconnect()
 }
 
