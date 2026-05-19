@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db/prisma"
 import { getCurrentUser } from "@/app/actions/auth"
 import { getOrCreateUserCharacter } from "@/lib/characters"
 import { ChatUI } from "@/components/chat/chat-ui"
-import { Button } from "@/components/ui/button"
 import { ArrowLeft, Settings, History } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -39,36 +38,46 @@ export default async function ChatPage({
   })
 
   return (
-    <div className="relative h-screen flex flex-col overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: `${character.themeColor}03` }}>
-        <div className="absolute top-0 inset-x-0 h-64 opacity-30"
-          style={{ background: `radial-gradient(ellipse at center, ${character.themeColor}15 0%, transparent 70%)` }} />
+    <div className="relative h-screen flex flex-col overflow-hidden bg-[#0a0a0f]">
+      {/* Subtle ambient */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute top-0 inset-x-0 h-48 opacity-20"
+          style={{
+            background: `radial-gradient(ellipse at 50% 0%, ${character.themeColor}10 0%, transparent 70%)`,
+          }}
+        />
       </div>
 
+      {/* Header */}
       <header
-        className="relative z-10 px-4 py-4 flex items-center justify-between shrink-0"
-        style={{ borderBottom: `1px solid ${character.themeColor}10` }}
+        className="relative z-10 px-4 h-14 flex items-center justify-between shrink-0 border-b border-white/[0.03]"
       >
-        <Link href="/characters">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            角色列表
-          </Button>
+        <Link
+          href="/characters"
+          className="inline-flex items-center gap-1.5 text-white/25 hover:text-white/50 text-xs transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          返回
         </Link>
+
         <div className="text-center">
-          <h2 className="text-white/70 font-medium text-sm">{character.name}</h2>
+          <h2 className="text-white/60 text-sm font-medium">{character.name}</h2>
           <p className="text-white/15 text-[10px]">{character.occupation}</p>
         </div>
-        <div className="flex items-center gap-1">
-          <Link href={`/chat/${characterId}/history`}>
-            <Button variant="ghost" size="icon">
-              <History className="w-4 h-4" />
-            </Button>
+
+        <div className="flex items-center gap-0.5">
+          <Link
+            href={`/chat/${characterId}/history`}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-white/20 hover:text-white/40 hover:bg-white/[0.03] transition-colors"
+          >
+            <History className="w-3.5 h-3.5" />
           </Link>
-          <Link href="/settings">
-            <Button variant="ghost" size="icon">
-              <Settings className="w-4 h-4" />
-            </Button>
+          <Link
+            href="/settings"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-white/20 hover:text-white/40 hover:bg-white/[0.03] transition-colors"
+          >
+            <Settings className="w-3.5 h-3.5" />
           </Link>
         </div>
       </header>
