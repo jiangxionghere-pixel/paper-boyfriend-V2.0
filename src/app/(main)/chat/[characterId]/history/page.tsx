@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db/prisma"
 import { getCurrentUser } from "@/app/actions/auth"
 import { Button } from "@/components/ui/button"
+import { TTSPlayer } from "@/components/chat/tts-player"
 import { ArrowLeft, Calendar, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -91,6 +92,7 @@ export default async function ChatHistoryPage({
       role: true,
       content: true,
       imageUrl: true,
+      audioUrl: true,
       createdAt: true,
     },
   })
@@ -194,6 +196,17 @@ export default async function ChatHistoryPage({
                             alt="照片"
                             className="w-full max-h-[200px] object-cover"
                             loading="lazy"
+                          />
+                        </div>
+                      )}
+                      {/* 历史记录中的语音 - 默认不自动播放 */}
+                      {msg.role === "assistant" && msg.audioUrl && (
+                        <div className="mt-3">
+                          <TTSPlayer 
+                            audioUrl={msg.audioUrl} 
+                            themeColor={character.themeColor}
+                            autoPlay={false}
+                            isMuted={false}
                           />
                         </div>
                       )}

@@ -7,22 +7,19 @@ interface TTSPlayerProps {
   audioUrl: string | null
   themeColor: string
   autoPlay?: boolean
-  onToggle?: () => void
   isMuted?: boolean
 }
 
 export function TTSPlayer({ 
   audioUrl, 
   themeColor, 
-  autoPlay = true,
-  onToggle,
+  autoPlay = false,
   isMuted = false
 }: TTSPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [progress, setProgress] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const progressRef = useRef<number>(0)
 
   // 预加载音频
   useEffect(() => {
@@ -33,24 +30,16 @@ export function TTSPlayer({
     
     const handleCanPlay = () => {
       setIsLoaded(true)
-      if (autoPlay && !isMuted && audio.paused) {
-        audio.play().catch(() => {
-          setIsPlaying(false)
-        })
-        setIsPlaying(true)
-      }
     }
 
     const handleEnded = () => {
       setIsPlaying(false)
       setProgress(0)
-      progressRef.current = 0
     }
 
     const handleTimeUpdate = () => {
       if (audio.duration) {
         const pct = (audio.currentTime / audio.duration) * 100
-        progressRef.current = pct
         setProgress(pct)
       }
     }
@@ -66,8 +55,6 @@ export function TTSPlayer({
     audio.addEventListener("error", handleError)
     
     audioRef.current = audio
-
-    // 开始加载
     audio.load()
 
     return () => {
@@ -78,14 +65,22 @@ export function TTSPlayer({
       audio.removeEventListener("error", handleError)
       audio.src = ""
     }
-  }, [audioUrl, autoPlay, isMuted])
+  }, [audioUrl])
+
+  // 自动播放控制（仅当未被静音时）
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio || !isLoaded) return
+
+    if (autoPlay && !isMuted && !isPlaying) {
+      audio.play().catch(() => {
+        setIsPlaying(false)
+      })
+      setIsPlaying(true)
+    }
+  }, [autoPlay, isMuted, isLoaded])
 
   const handleToggle = useCallback(() => {
-    if (onToggle) {
-      onToggle()
-      return
-    }
-
     const audio = audioRef.current
     if (!audio || !isLoaded) return
 
@@ -100,7 +95,7 @@ export function TTSPlayer({
       })
       setIsPlaying(true)
     }
-  }, [isPlaying, isLoaded, onToggle])
+  }, [isPlaying, isLoaded])
 
   if (!audioUrl) return null
 

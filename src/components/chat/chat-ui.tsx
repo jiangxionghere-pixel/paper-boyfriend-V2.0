@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Send, Loader2, User } from "lucide-react"
+import { Send, Loader2, User, Volume2, VolumeX } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { TTSPlayer } from "./tts-player"
@@ -56,7 +56,7 @@ export function ChatUI({
     inputRef.current?.focus()
   }, [isLoading])
 
-  // Toggle TTS setting
+  // Toggle TTS setting (global mute/unmute for new messages)
   const toggleTts = async () => {
     if (isTogglingTts) return
     setIsTogglingTts(true)
@@ -230,7 +230,7 @@ export function ChatUI({
                     </div>
                   )}
 
-                  {/* TTS Player - 嵌入在气泡内 */}
+                  {/* TTS Player - 嵌入在气泡内，每条消息独立控制 */}
                   {msg.role === "assistant" && msg.audioUrl && (
                     <div className="mt-2 relative z-10">
                       <TTSPlayer 
@@ -238,7 +238,6 @@ export function ChatUI({
                         themeColor={themeColor}
                         autoPlay={ttsEnabled}
                         isMuted={!ttsEnabled}
-                        onToggle={toggleTts}
                       />
                     </div>
                   )}
