@@ -1,14 +1,23 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Play, Pause, Volume2 } from "lucide-react"
+import { Volume2, VolumeX } from "lucide-react"
 
 interface TTSPlayerProps {
   audioUrl: string | null
   themeColor: string
+  autoPlay?: boolean
+  onToggle?: () => void
+  isMuted?: boolean
 }
 
-export function TTSPlayer({ audioUrl, themeColor }: TTSPlayerProps) {
+export function TTSPlayer({ 
+  audioUrl, 
+  themeColor, 
+  autoPlay = true,
+  onToggle,
+  isMuted = false
+}: TTSPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -16,25 +25,41 @@ export function TTSPlayer({ audioUrl, themeColor }: TTSPlayerProps) {
   useEffect(() => {
     if (audioUrl) {
       const audio = new Audio(audioUrl)
-      audio.addEventListener("canplaythrough", () => setIsLoaded(true))
+      audio.addEventListener("canplaythrough", () => {
+        setIsLoaded(true)
+        // 自动播放（如果未静音）
+        if (autoPlay && !isMuted) {
+          audio.play().catch((err) => {
+            console.error("[TTS] Auto-play failed:", err)
+            setIsPlaying(false)
+          })
+          setIsPlaying(true)
+        }
+      })
       audio.addEventListener("ended", () => setIsPlaying(false))
       audio.addEventListener("error", () => setIsLoaded(false))
       audioRef.current = audio
 
       return () => {
         audio.pause()
-        audio.removeEventListener("canplaythrough", () => setIsLoaded(true))
-        audio.removeEventListener("ended", () => setIsPlaying(false))
-        audio.removeEventListener("error", () => setIsLoaded(false))
+        audio.removeEventListener("canplaythrough", () => {})
+        audio.removeEventListener("ended", () => {})
+        audio.removeEventListener("error", () => {})
       }
     }
-  }, [audioUrl])
+  }, [audioUrl, autoPlay, isMuted])
 
-  const togglePlay = () => {
+  const handleToggle = () => {
+    if (onToggle) {
+      onToggle()
+      return
+    }
+
     if (!audioRef.current || !isLoaded) return
 
     if (isPlaying) {
       audioRef.current.pause()
+      audioRef.current.currentTime = 0
       setIsPlaying(false)
     } else {
       audioRef.current.play().catch((err) => {
@@ -49,22 +74,36 @@ export function TTSPlayer({ audioUrl, themeColor }: TTSPlayerProps) {
 
   return (
     <button
-      onClick={togglePlay}
+      onClick={handleToggle}
       disabled={!isLoaded}
-      className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-full text-xs transition-all duration-200 hover:scale-105 disabled:opacity-30"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] transition-all duration-200 hover:scale-105 disabled:opacity-30"
       style={{
-        backgroundColor: `${themeColor}15`,
-        color: `${themeColor}cc`,
-        border: `1px solid ${themeColor}20`,
+        backgroundColor: isMuted ? "rgba(255,255,255,0.05)" : `${themeColor}15`,
+        color: isMuted ? "rgba(255,255,255,0.3)" : `${themeColor}cc`,
+        border: `1px solid ${isMuted ? "rgba(255,255,255,0.08)" : `${themeColor}20`}`,
       }}
     >
-      {isPlaying ? (
-        <Pause className="w-3 h-3" />
+      {isMuted ? (
+        <VolumeX className="w-3 h-3" />
+      ) : isPlaying ? (
+        <span className="flex items-center gap-0.5">
+          <span 
+            className="w-[2px] h-2.5 rounded-full animate-pulse" 
+            style={{ backgroundColor: themeColor, animationDelay: "0ms" }}
+          />
+          <span 
+            className="w-[2px] h-3 rounded-full animate-pulse" 
+            style={{ backgroundColor: themeColor, animationDelay: "150ms" }}
+          />
+          <span 
+            className="w-[2px] h-2 rounded-full animate-pulse" 
+            style={{ backgroundColor: themeColor, animationDelay: "300ms" }}
+          />
+        </span>
       ) : (
-        <Play className="w-3 h-3" />
+        <Volume2 className="w-3 h-3" />
       )}
-      <span>{isPlaying ? "播放中" : "听语音"}</span>
-      <Volume2 className="w-3 h-3 ml-0.5" />
+      <span>{isMuted ? "已静音" : isPlaying ? "播放中" : "听语音"}</span>
     </button>
   )
 }

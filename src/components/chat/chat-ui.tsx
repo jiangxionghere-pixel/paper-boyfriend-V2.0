@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Send, Loader2, User, Volume2, VolumeX } from "lucide-react"
+import { Send, Loader2, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { TTSPlayer } from "./tts-player"
@@ -150,10 +150,10 @@ export function ChatUI({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 relative z-10">
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto chat-scrollbar px-4 py-6">
-        <div className="max-w-2xl mx-auto space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 relative z-10 bg-[#0a0a0a]">
+      {/* Messages Area - 微信风格 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto space-y-3">
           {messages.length === 0 && (
             <div className="text-center py-24 animate-fade-in">
               <div
@@ -171,95 +171,107 @@ export function ChatUI({
             <div
               key={msg.id}
               className={cn(
-                "flex animate-fade-in-up gap-3",
+                "flex gap-3",
                 msg.role === "user" ? "justify-end" : "justify-start"
               )}
-              style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
             >
-              {/* Avatar for assistant */}
+              {/* Avatar for assistant - 微信左侧 */}
               {msg.role === "assistant" && (
-                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-white/5">
+                <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white/5 shadow-sm">
                   {characterAvatarUrl ? (
                     <Image
                       src={characterAvatarUrl}
                       alt="Character"
-                      width={32}
-                      height={32}
+                      width={40}
+                      height={40}
                       className="object-cover w-full h-full"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-white/20" />
+                      <User className="w-5 h-5 text-white/20" />
                     </div>
                   )}
                 </div>
               )}
 
-              <div
-                className={cn(
-                  "max-w-[75%]",
-                  msg.role === "user" ? "rounded-2xl rounded-br-md" : "rounded-2xl rounded-bl-md"
-                )}
-                style={
-                  msg.role === "user"
-                    ? {
-                        background: `linear-gradient(135deg, ${themeColor}20 0%, ${themeColor}10 100%)`,
-                        border: `1px solid ${themeColor}15`,
-                        backdropFilter: "blur(12px)",
-                        padding: "14px 18px",
-                      }
-                    : {
-                        background: "rgba(255, 255, 255, 0.03)",
-                        border: "1px solid rgba(255, 255, 255, 0.05)",
-                        padding: "14px 18px",
-                      }
-                }
-              >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words" style={{ color: msg.role === "user" ? "rgba(255,255,255,0.85)" : "rgba(245,240,235,0.75)" }}>
-                  {msg.content}
-                </p>
+              {/* Message Bubble - 微信风格 */}
+              <div className="flex flex-col max-w-[70%]">
+                <div
+                  className={cn(
+                    "relative px-4 py-2.5 text-[15px] leading-relaxed",
+                    msg.role === "user" 
+                      ? "bg-[#95ec69] text-[#1a1a1a] rounded-2xl rounded-tr-sm" 
+                      : "bg-[#262626] text-white/90 rounded-2xl rounded-tl-sm"
+                  )}
+                >
+                  {/* 微信气泡小三角 */}
+                  <span 
+                    className={cn(
+                      "absolute top-3 w-2 h-2",
+                      msg.role === "user" 
+                        ? "-right-1 bg-[#95ec69] rotate-45" 
+                        : "-left-1 bg-[#262626] rotate-45"
+                    )}
+                  />
+                  
+                  <p className="whitespace-pre-wrap break-words relative z-10">
+                    {msg.content}
+                  </p>
 
-                {/* Image */}
-                {msg.imageUrl && (
-                  <div className="mt-4 rounded-xl overflow-hidden border border-white/[0.06] image-hover-zoom">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={msg.imageUrl}
-                      alt="照片"
-                      className="w-full max-w-[300px] object-cover"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
+                  {/* Image */}
+                  {msg.imageUrl && (
+                    <div className="mt-2 rounded-lg overflow-hidden">
+                      <img
+                        src={msg.imageUrl}
+                        alt="照片"
+                        className="w-full max-w-[240px] object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
 
-                {/* TTS Player - only show if TTS is enabled */}
-                {msg.role === "assistant" && msg.audioUrl && ttsEnabled && (
-                  <TTSPlayer audioUrl={msg.audioUrl} themeColor={themeColor} />
-                )}
+                  {/* TTS Player - 嵌入在气泡内 */}
+                  {msg.role === "assistant" && msg.audioUrl && (
+                    <div className="mt-2 relative z-10">
+                      <TTSPlayer 
+                        audioUrl={msg.audioUrl} 
+                        themeColor={themeColor}
+                        autoPlay={ttsEnabled}
+                        isMuted={!ttsEnabled}
+                        onToggle={toggleTts}
+                      />
+                    </div>
+                  )}
+                </div>
 
-                {/* Timestamp */}
-                <p className="text-[10px] text-white/10 mt-2">
+                {/* Timestamp - 微信风格 */}
+                <span 
+                  className={cn(
+                    "text-[10px] text-white/25 mt-1",
+                    msg.role === "user" ? "text-right" : "text-left"
+                  )}
+                >
                   {new Date(msg.createdAt).toLocaleTimeString("zh-CN", {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
-                </p>
+                </span>
               </div>
 
-              {/* Avatar for user */}
+              {/* Avatar for user - 微信右侧 */}
               {msg.role === "user" && (
-                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-white/5">
+                <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white/5 shadow-sm">
                   {userAvatarUrl ? (
                     <Image
                       src={userAvatarUrl}
                       alt="User"
-                      width={32}
-                      height={32}
+                      width={40}
+                      height={40}
                       className="object-cover w-full h-full"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-white/20" />
+                      <User className="w-5 h-5 text-white/20" />
                     </div>
                   )}
                 </div>
@@ -270,34 +282,10 @@ export function ChatUI({
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="shrink-0 px-4 py-4" style={{ borderTop: `1px solid ${themeColor}10` }}>
-        <div className="max-w-2xl mx-auto">
-          {/* TTS Toggle */}
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={toggleTts}
-              disabled={isTogglingTts}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all duration-200 hover:scale-105 disabled:opacity-50"
-              style={{
-                backgroundColor: ttsEnabled ? `${themeColor}15` : "rgba(255,255,255,0.03)",
-                color: ttsEnabled ? `${themeColor}cc` : "rgba(255,255,255,0.3)",
-                border: `1px solid ${ttsEnabled ? `${themeColor}25` : "rgba(255,255,255,0.05)"}`,
-              }}
-            >
-              {ttsEnabled ? (
-                <Volume2 className="w-3 h-3" />
-              ) : (
-                <VolumeX className="w-3 h-3" />
-              )}
-              <span>{ttsEnabled ? "语音已开启" : "语音已关闭"}</span>
-            </button>
-            <span className="text-[10px] text-white/15">
-              {ttsEnabled ? "角色回复将自动生成语音" : "语音功能已暂停"}
-            </span>
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex gap-3">
+      {/* Input Area - 微信风格底部输入栏 */}
+      <div className="shrink-0 px-4 py-3 bg-[#111] border-t border-white/[0.06]">
+        <div className="max-w-3xl mx-auto">
+          <form onSubmit={handleSubmit} className="flex items-center gap-3">
             <input
               ref={inputRef}
               type="text"
@@ -305,21 +293,21 @@ export function ChatUI({
               onChange={(e) => setInput(e.target.value)}
               placeholder="说点什么..."
               disabled={isLoading}
-              className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-2xl px-5 py-3.5 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/10 transition-colors disabled:opacity-30"
+              className="flex-1 bg-[#1a1a1a] border-0 rounded-lg px-4 py-2.5 text-[15px] text-white/90 placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/10 transition-all disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 hover:scale-105 disabled:opacity-30 disabled:hover:scale-100"
+              className="shrink-0 px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 hover:scale-105 disabled:opacity-30 disabled:hover:scale-100 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: `${themeColor}20`,
-                border: `1px solid ${themeColor}30`,
+                backgroundColor: input.trim() ? themeColor : "rgba(255,255,255,0.1)",
+                color: input.trim() ? "#fff" : "rgba(255,255,255,0.3)",
               }}
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" style={{ color: `${themeColor}cc` }} />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Send className="w-5 h-5" style={{ color: `${themeColor}cc` }} />
+                "发送"
               )}
             </button>
           </form>
