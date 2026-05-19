@@ -33,6 +33,7 @@ export default async function ChatPage({
       role: true,
       content: true,
       imageUrl: true,
+      audioUrl: true,
       createdAt: true,
     },
   })
