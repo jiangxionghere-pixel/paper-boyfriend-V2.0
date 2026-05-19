@@ -171,11 +171,30 @@ export async function textToSpeech(
 
       // 处理缓冲区中剩余的音频数据（非 JSON 的 //OEx 片段）
       if (buffer.includes("//OEx")) {
-        const audioParts = buffer.split(/\{.*?\}/s)
-        for (const part of audioParts) {
-          if (part.startsWith("//OEx")) {
-            audioBase64 += part
+        // 手动移除 JSON 对象，保留音频数据
+        let cleaned = buffer
+        while (true) {
+          const startIdx = cleaned.indexOf("{")
+          if (startIdx === -1) break
+
+          let braceCount = 0
+          let endIdx = -1
+          for (let i = startIdx; i < cleaned.length; i++) {
+            if (cleaned[i] === "{") braceCount++
+            else if (cleaned[i] === "}") braceCount--
+
+            if (braceCount === 0) {
+              endIdx = i
+              break
+            }
           }
+
+          if (endIdx === -1) break
+          cleaned = cleaned.slice(0, startIdx) + cleaned.slice(endIdx + 1)
+        }
+
+        if (cleaned.startsWith("//OEx")) {
+          audioBase64 += cleaned
         }
         buffer = ""
       }
