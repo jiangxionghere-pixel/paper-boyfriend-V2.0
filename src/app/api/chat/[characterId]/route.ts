@@ -75,7 +75,7 @@ export async function POST(
 
     const assistantContent = await chatCompletion(messages, {
       temperature: 0.8,
-      maxTokens: 1024,
+      maxTokens: 300,
     })
 
     const sendPhotoMatch = assistantContent.match(/\[SEND_PHOTO:\s*([^\]]+)\]/)
