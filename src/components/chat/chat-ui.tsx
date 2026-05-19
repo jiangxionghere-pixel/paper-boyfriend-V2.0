@@ -239,7 +239,7 @@ export function ChatUI({
                       <TTSPlayer 
                         audioUrl={msg.audioUrl} 
                         themeColor={themeColor}
-                        autoPlay={ttsEnabled && !ttsMuted}
+                        autoPlay={false}
                         isMuted={ttsMuted}
                       />
                     </div>

@@ -20,10 +20,14 @@ export function TTSPlayer({
   const [isLoaded, setIsLoaded] = useState(false)
   const [progress, setProgress] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const hasAutoPlayedRef = useRef(false)
 
   // 预加载音频
   useEffect(() => {
     if (!audioUrl) return
+
+    // 重置自动播放标记，当 audioUrl 变化时（新消息）
+    hasAutoPlayedRef.current = false
 
     const audio = new Audio(audioUrl)
     audio.preload = "auto"
@@ -67,12 +71,14 @@ export function TTSPlayer({
     }
   }, [audioUrl])
 
-  // 自动播放控制（仅当未被静音时）
+  // 自动播放控制（仅当未被静音时，且只自动播放一次）
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !isLoaded) return
 
-    if (autoPlay && !isMuted && !isPlaying) {
+    // 只在 autoPlay 为 true、未静音、未播放过、且未自动播放过时播放
+    if (autoPlay && !isMuted && !isPlaying && !hasAutoPlayedRef.current) {
+      hasAutoPlayedRef.current = true
       audio.play().catch(() => {
         setIsPlaying(false)
       })

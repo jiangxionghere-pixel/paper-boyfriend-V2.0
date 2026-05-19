@@ -146,6 +146,18 @@ export async function textToSpeech(
 
     // 解码 base64 音频数据
     const audioBuffer = Buffer.from(audioBase64, "base64")
+
+    // 验证音频数据完整性（MP3 文件以 ID3 或 0xFFE 开头）
+    const isValidMp3 = audioBuffer.length > 10 && (
+      audioBuffer[0] === 0x49 && audioBuffer[1] === 0x44 && audioBuffer[2] === 0x33 || // ID3
+      audioBuffer[0] === 0xFF && (audioBuffer[1] & 0xE0) === 0xE0 // MPEG sync
+    )
+
+    if (!isValidMp3) {
+      process.stderr.write(`[TTS] Invalid MP3 data, first bytes: ${audioBuffer.slice(0, 4).toString('hex')}\n`)
+      return null
+    }
+
     const audioBlob = new Blob([audioBuffer], { type: "audio/mp3" })
 
     // 上传到 Vercel Blob
@@ -159,7 +171,7 @@ export async function textToSpeech(
       }
     )
 
-    process.stderr.write(`[TTS] Audio uploaded: ${url}\n`)
+    process.stderr.write(`[TTS] Audio uploaded: ${url} (${audioBuffer.length} bytes)\n`)
     return url
   } catch (error) {
     process.stderr.write(`[TTS] Generation failed: ${error}\n`)
