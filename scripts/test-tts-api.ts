@@ -41,7 +41,7 @@ async function testTTS() {
           "Content-Type": "application/json",
           "X-Api-App-Id": TTS_APP_ID,
           "X-Api-Access-Key": TTS_API_KEY,
-          "X-Api-Resource-Id": "seed-tts-2.0",
+          "X-Api-Resource-Id": "seed-tts-1.0",
         },
         body: JSON.stringify({
           user: {

@@ -4,13 +4,14 @@ const prisma = new PrismaClient()
 
 // 豆包语音合成模型 2.0 音色配置
 // 文档: https://www.volcengine.com/docs/6561/1257544
+// 2.0 音色后缀: uranus_bigtts (通用) / jupiter_bigtts (端到端)
 const VOICE_CONFIGS: Record<string, string> = {
-  "lin-yu": "zh_male_yangguangqingnian_emo_v2_mars_bigtts",   // 林屿 - 温柔内敛 -> 阳光青年(多情感)
-  "gu-zhao": "zh_male_jingqiangkanye_emo_mars_bigtts",         // 顾昭 - 成熟稳重 -> 京腔侃爷(多情感)
-  "chen-mu": "zh_male_beijingxiaoye_emo_v2_mars_bigtts",       // 陈牧 - 阳光开朗 -> 北京小爷(多情感)
-  "bai-ye": "zh_male_yourougongzi_emo_v2_mars_bigtts",         // 白夜 - 文艺安静 -> 优柔公子(多情感)
-  "huo-li": "zh_male_aojiaobazong_emo_v2_mars_bigtts",         // 霍砺 - 霸道强势 -> 傲娇霸总(多情感)
-  "xia-zhi": "zh_female_roumeinvyou_emo_v2_mars_bigtts",       // 夏知 - 软甜治愈 -> 柔美女友(多情感)
+  "lin-yu": "zh_male_m191_uranus_bigtts",     // 林屿 - 温柔内敛 -> 云舟 2.0 (沉稳男声)
+  "gu-zhao": "zh_male_taocheng_uranus_bigtts", // 顾昭 - 成熟稳重 -> 小天 2.0 (成熟男声)
+  "chen-mu": "zh_male_m191_uranus_bigtts",     // 陈牧 - 阳光开朗 -> 云舟 2.0 (阳光)
+  "bai-ye": "zh_male_taocheng_uranus_bigtts",  // 白夜 - 文艺安静 -> 小天 2.0 (温柔)
+  "huo-li": "zh_male_m191_uranus_bigtts",      // 霍砺 - 霸道强势 -> 云舟 2.0 (霸气)
+  "xia-zhi": "zh_female_vv_uranus_bigtts",     // 夏知 - 软甜治愈 -> Vivi 2.0 (甜美女声)
 }
 
 async function updateVoiceIds() {
