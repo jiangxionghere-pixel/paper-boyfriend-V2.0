@@ -122,18 +122,29 @@ export async function POST(
 
     // Generate TTS audio after message is created (only if user enabled TTS)
     let audioUrl: string | null = null
+    console.log("[Chat] TTS Check:", { 
+      voiceId: character.voiceId, 
+      ttsEnabled: userCharacter.ttsEnabled,
+      hasVoiceId: !!character.voiceId,
+      hasTtsEnabled: userCharacter.ttsEnabled
+    })
     if (character.voiceId && userCharacter.ttsEnabled) {
       try {
+        console.log("[Chat] Generating TTS with voice:", character.voiceId)
         audioUrl = await textToSpeech(cleanContent.slice(0, 500), character.voiceId)
+        console.log("[Chat] TTS result:", audioUrl ? "Success" : "Failed")
         if (audioUrl) {
           await prisma.message.update({
             where: { id: assistantMessageRecord.id },
             data: { audioUrl },
           })
+          console.log("[Chat] TTS saved to message:", assistantMessageRecord.id)
         }
       } catch (err) {
         console.error("[TTS] Generation error:", err)
       }
+    } else {
+      console.log("[Chat] TTS skipped - voiceId or ttsEnabled not available")
     }
 
     await prisma.userCharacter.update({

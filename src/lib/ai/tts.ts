@@ -13,6 +13,13 @@ export async function textToSpeech(
   text: string,
   voiceId?: string
 ): Promise<string | null> {
+  console.log("[TTS] Checking config:", { 
+    hasApiKey: !!TTS_API_KEY, 
+    hasAppId: !!TTS_APP_ID,
+    apiKeyLength: TTS_API_KEY?.length,
+    appId: TTS_APP_ID
+  })
+  
   if (!TTS_API_KEY || !TTS_APP_ID) {
     console.log("[TTS] API key or App ID not configured, skipping")
     return null
