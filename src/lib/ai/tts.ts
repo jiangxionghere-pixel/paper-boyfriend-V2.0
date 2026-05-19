@@ -105,6 +105,7 @@ export async function textToSpeech(
 
     let audioBase64 = ""
     let chunkCount = 0
+    let buffer = "" // 用于缓存不完整的 JSON
 
     while (true) {
       const { done, value } = await reader.read()
@@ -113,26 +114,70 @@ export async function textToSpeech(
       chunkCount++
       const chunkText = new TextDecoder().decode(value)
 
-      // 解析 JSON 行，提取音频数据
-      const lines = chunkText.split("\n").filter((line) => line.trim())
-      for (const line of lines) {
+      // 将新数据追加到缓冲区
+      buffer += chunkText
+
+      // 尝试提取完整的 JSON 对象
+      while (true) {
+        // 查找完整的 JSON 对象（以 { 开头，以 } 结尾）
+        const startIdx = buffer.indexOf("{")
+        if (startIdx === -1) {
+          // 没有 {，清空缓冲区（除非是音频数据）
+          if (!buffer.startsWith("//OEx")) {
+            buffer = ""
+          }
+          break
+        }
+
+        // 查找匹配的 }
+        let braceCount = 0
+        let endIdx = -1
+        for (let i = startIdx; i < buffer.length; i++) {
+          if (buffer[i] === "{") braceCount++
+          else if (buffer[i] === "}") braceCount--
+
+          if (braceCount === 0) {
+            endIdx = i
+            break
+          }
+        }
+
+        if (endIdx === -1) {
+          // 没有找到完整的 JSON，保留缓冲区等待下一个 chunk
+          break
+        }
+
+        // 提取完整的 JSON 字符串
+        const jsonStr = buffer.slice(startIdx, endIdx + 1)
+        buffer = buffer.slice(endIdx + 1)
+
         try {
-          const data = JSON.parse(line)
+          const data = JSON.parse(jsonStr)
+
           // 检查业务错误码 (code 0 表示成功，20000000 表示结束)
           if (data.code !== undefined && data.code !== 0 && data.code !== 20000000) {
             process.stderr.write(`[TTS] Business error [${data.code}]: ${data.message}\n`)
             return null
           }
-          // 音频数据在 data 字段直接存放 (base64 字符串)
+
+          // 提取音频数据
           if (data.data && typeof data.data === "string" && data.data.startsWith("//OEx")) {
             audioBase64 += data.data
           }
         } catch {
-          // 非 JSON 行，可能是音频数据片段，尝试直接追加
-          if (line.startsWith("//OEx")) {
-            audioBase64 += line
+          // JSON 解析失败，可能是音频数据片段
+        }
+      }
+
+      // 处理缓冲区中剩余的音频数据（非 JSON 的 //OEx 片段）
+      if (buffer.includes("//OEx")) {
+        const audioParts = buffer.split(/\{.*?\}/s)
+        for (const part of audioParts) {
+          if (part.startsWith("//OEx")) {
+            audioBase64 += part
           }
         }
+        buffer = ""
       }
     }
 
