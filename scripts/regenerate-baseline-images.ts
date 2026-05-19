@@ -43,6 +43,11 @@ async function regenerateBaselineImages() {
       const fileName = `characters/baseline/${char.id}-${Date.now()}.png`
       const uploadedUrl = await uploadBufferToR2(buffer, fileName, "image/png")
 
+      if (!uploadedUrl) {
+        console.error(`   ❌ ${char.name} 上传失败`)
+        continue
+      }
+
       console.log(`   ✅ 上传成功: ${uploadedUrl.slice(0, 60)}...`)
 
       // 更新数据库
