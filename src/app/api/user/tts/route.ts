@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth/session"
 /**
  * 更新用户TTS设置
  * POST /api/user/tts
- * Body: { userCharacterId: string, ttsEnabled: boolean }
+ * Body: { userCharacterId: string, ttsEnabled?: boolean, ttsMuted?: boolean }
  */
 
 export async function POST(request: Request) {
@@ -15,11 +15,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { userCharacterId, ttsEnabled } = await request.json()
+    const { userCharacterId, ttsEnabled, ttsMuted } = await request.json()
 
-    if (!userCharacterId || typeof ttsEnabled !== "boolean") {
+    if (!userCharacterId) {
       return NextResponse.json(
-        { error: "Missing userCharacterId or ttsEnabled" },
+        { error: "Missing userCharacterId" },
         { status: 400 }
       )
     }
@@ -39,16 +39,26 @@ export async function POST(request: Request) {
       )
     }
 
+    // 构建更新数据
+    const updateData: { ttsEnabled?: boolean; ttsMuted?: boolean } = {}
+    if (typeof ttsEnabled === "boolean") {
+      updateData.ttsEnabled = ttsEnabled
+    }
+    if (typeof ttsMuted === "boolean") {
+      updateData.ttsMuted = ttsMuted
+    }
+
     // 更新TTS设置
     const updated = await prisma.userCharacter.update({
       where: { id: userCharacterId },
-      data: { ttsEnabled },
-      select: { id: true, ttsEnabled: true },
+      data: updateData,
+      select: { id: true, ttsEnabled: true, ttsMuted: true },
     })
 
     return NextResponse.json({
       success: true,
       ttsEnabled: updated.ttsEnabled,
+      ttsMuted: updated.ttsMuted,
     })
   } catch (error) {
     console.error("[TTS Settings] Error:", error)

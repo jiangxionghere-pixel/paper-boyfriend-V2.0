@@ -88,6 +88,7 @@ export default async function ChatPage({
         userAvatarUrl={user.avatarUrl}
         characterAvatarUrl={character.avatarUrl}
         initialTtsEnabled={userCharacter.ttsEnabled}
+        initialTtsMuted={userCharacter.ttsMuted}
       />
     </div>
   )

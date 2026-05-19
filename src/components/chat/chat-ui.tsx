@@ -23,6 +23,7 @@ interface ChatUIProps {
   userAvatarUrl?: string | null
   characterAvatarUrl?: string | null
   initialTtsEnabled?: boolean
+  initialTtsMuted?: boolean
 }
 
 export function ChatUI({
@@ -33,11 +34,13 @@ export function ChatUI({
   userAvatarUrl,
   characterAvatarUrl,
   initialTtsEnabled = true,
+  initialTtsMuted = false,
 }: ChatUIProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [ttsEnabled, setTtsEnabled] = useState(initialTtsEnabled)
+  const [ttsMuted, setTtsMuted] = useState(initialTtsMuted)
   const [isTogglingTts, setIsTogglingTts] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -56,29 +59,29 @@ export function ChatUI({
     inputRef.current?.focus()
   }, [isLoading])
 
-  // Toggle TTS setting (global mute/unmute for new messages)
-  const toggleTts = async () => {
+  // Toggle TTS mute (只控制播放，不影响生成)
+  const toggleTtsMute = async () => {
     if (isTogglingTts) return
     setIsTogglingTts(true)
 
-    const newValue = !ttsEnabled
+    const newValue = !ttsMuted
     try {
       const res = await fetch("/api/user/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userCharacterId,
-          ttsEnabled: newValue,
+          ttsMuted: newValue,
         }),
       })
 
       if (res.ok) {
-        setTtsEnabled(newValue)
+        setTtsMuted(newValue)
       } else {
-        console.error("Failed to toggle TTS")
+        console.error("Failed to toggle TTS mute")
       }
     } catch (error) {
-      console.error("TTS toggle error:", error)
+      console.error("TTS mute toggle error:", error)
     } finally {
       setIsTogglingTts(false)
     }
@@ -236,8 +239,8 @@ export function ChatUI({
                       <TTSPlayer 
                         audioUrl={msg.audioUrl} 
                         themeColor={themeColor}
-                        autoPlay={ttsEnabled}
-                        isMuted={!ttsEnabled}
+                        autoPlay={ttsEnabled && !ttsMuted}
+                        isMuted={ttsMuted}
                       />
                     </div>
                   )}
@@ -285,6 +288,24 @@ export function ChatUI({
       <div className="shrink-0 px-4 py-3 bg-[#111] border-t border-white/[0.06]">
         <div className="max-w-3xl mx-auto">
           <form onSubmit={handleSubmit} className="flex items-center gap-3">
+            {/* 静音按钮 */}
+            <button
+              type="button"
+              onClick={toggleTtsMute}
+              disabled={isTogglingTts}
+              className="shrink-0 p-2.5 rounded-lg transition-all duration-200 hover:scale-105 disabled:opacity-30"
+              style={{
+                backgroundColor: ttsMuted ? "rgba(255,255,255,0.05)" : `${themeColor}15`,
+                color: ttsMuted ? "rgba(255,255,255,0.3)" : `${themeColor}cc`,
+              }}
+              title={ttsMuted ? "点击开启语音" : "点击静音"}
+            >
+              {ttsMuted ? (
+                <VolumeX className="w-4 h-4" />
+              ) : (
+                <Volume2 className="w-4 h-4" />
+              )}
+            </button>
             <input
               ref={inputRef}
               type="text"
