@@ -74,14 +74,64 @@ export async function POST(
     ]
 
     const assistantContent = await chatCompletion(messages, {
-      temperature: 0.8,
-      maxTokens: 300,
+      temperature: 0.7,
+      maxTokens: 120,
     })
 
-    const sendPhotoMatch = assistantContent.match(/\[SEND_PHOTO:\s*([^\]]+)\]/)
-    const cleanContent = assistantContent
+    // 强制过滤旁白：移除所有括号内容（包括圆括号、方括号、花括号、书名号等）
+    let cleanContent = assistantContent
+      // 移除 [SEND_PHOTO:...] 标记
       .replace(/\[SEND_PHOTO:\s*[^\]]+\]/g, "")
+      // 移除圆括号及其中内容：(手机差点摔了，整个人愣住了)
+      .replace(/\([^)]*\)/g, "")
+      // 移除中文全角括号及其中内容：（手机差点摔了）
+      .replace(/（[^）]*）/g, "")
+      // 移除方括号及其中内容（除已处理的 SEND_PHOTO）
+      .replace(/\[[^\]]*\]/g, "")
+      // 移除花括号及其中内容
+      .replace(/\{[^}]*\}/g, "")
+      // 移除尖括号及其中内容
+      .replace(/<[^>]*>/g, "")
+      // 移除 *动作* 或 *神态* 格式的旁白
+      .replace(/\*[^*]+\*/g, "")
+      // 移除 ~动作~ 格式的旁白
+      .replace(/~[^~]+~/g, "")
+      // 移除 "动作：" 或 "神态：" 前缀的行
+      .replace(/^[\s]*(?:动作|神态|表情|心理|旁白|场景|描述)[：:].*$/gim, "")
+      // 移除 "（" 或 "(" 开头的整行
+      .replace(/^[\s]*[（(].*$/gm, "")
+      // 清理多余空行
+      .replace(/\n{3,}/g, "\n\n")
       .trim()
+
+    // 进一步清理：如果某行包含明显的旁白关键词，移除整行
+    const narrationKeywords = [
+      "手机", "翻过来", "倒在", "滚了", "举起来", "凑近", "屏幕",
+      "表情", "假装", "眼角", "藏不住", "想半天", "泄气", "翻身",
+      "小声", "嘟囔", "嘴硬", "愣住", "看了一眼", "确认"
+    ]
+    const lines = cleanContent.split("\n")
+    const filteredLines = lines.filter(line => {
+      const trimmed = line.trim()
+      if (!trimmed) return false
+      // 如果整行都是旁白关键词，过滤掉
+      const isNarration = narrationKeywords.some(kw => trimmed.includes(kw)) && 
+        !trimmed.match(/[？?！!。，,\s]{2,}/) // 保留有明显标点（对话特征）的行
+      return !isNarration
+    })
+    cleanContent = filteredLines.join("\n").trim()
+
+    // 如果过滤后内容为空，给一个默认回复
+    if (!cleanContent || cleanContent.length < 2) {
+      cleanContent = "怎么啦？"
+    }
+
+    // 限制总长度（最多100个字符）
+    if (cleanContent.length > 100) {
+      cleanContent = cleanContent.slice(0, 100) + "..."
+    }
+
+    const sendPhotoMatch = assistantContent.match(/\[SEND_PHOTO:\s*([^\]]+)\]/)
 
     let imageUrl: string | null = null
 
