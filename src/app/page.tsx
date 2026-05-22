@@ -101,15 +101,26 @@ export default async function HomePage() {
           </div>
 
           <h1 className="heading-display text-5xl md:text-7xl mb-6 animate-fade-in-up stagger-1">
-            <span className="text-gradient-warm">遇见你的</span>
+            <span className="text-gradient-warm">专属灵魂男友</span>
             <br />
-            <span className="text-white/80">命中注定</span>
+            <span className="text-white/80">陪你共度朝夕</span>
           </h1>
 
-          <p className="text-white/25 text-base md:text-lg max-w-md mx-auto mb-12 leading-relaxed animate-fade-in-up stagger-2">
-            他不是聊天机器人，而是一个会记住你的喜好、会因你的冷淡而失落的
-            <span className="text-white/40">真实存在</span>
+          <p className="text-white/25 text-base md:text-lg max-w-md mx-auto mb-6 leading-relaxed animate-fade-in-up stagger-2">
+            他记得你的偏爱与心事，懂你的欢喜与低落
           </p>
+
+          <p className="text-white/20 text-sm max-w-md mx-auto mb-8 leading-relaxed animate-fade-in-up stagger-2">
+            关系慢慢升温，爱意自然生长，一场只属于你的心动陪伴
+          </p>
+
+          <div className="flex items-center justify-center gap-4 mb-10 animate-fade-in-up stagger-2">
+            <span className="text-white/15 text-xs">私密对话全程守护</span>
+            <span className="text-white/10">|</span>
+            <span className="text-white/15 text-xs">人设鲜活有温度</span>
+            <span className="text-white/10">|</span>
+            <span className="text-white/15 text-xs">相处剧情随心演进</span>
+          </div>
 
           <div className="flex items-center justify-center gap-3 animate-fade-in-up stagger-3">
             <Link href="/register">

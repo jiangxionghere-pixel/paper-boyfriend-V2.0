@@ -1,0 +1,47 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="50%" stop-color="#16213e"/>
+      <stop offset="100%" stop-color="#0f3460"/>
+    </linearGradient>
+    <linearGradient id="text" x1="0" y1="0" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f4a261"/>
+      <stop offset="50%" stop-color="#e76f51"/>
+      <stop offset="100%" stop-color="#f4a261"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="200" cy="150" r="100" fill="#f4a261" opacity="0.05"/>
+  <circle cx="1000" cy="500" r="150" fill="#e76f51" opacity="0.05"/>
+  <circle cx="600" cy="100" r="80" fill="#fff" opacity="0.03"/>
+
+  <!-- Main Title -->
+  <text x="600" y="280" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="url(#text)">
+    纸片人男友 2.0
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="360" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="400" fill="#ffffff" opacity="0.9">
+    专属灵魂男友，陪你共度朝夕
+  </text>
+
+  <!-- Description -->
+  <text x="600" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="300" fill="#ffffff" opacity="0.6">
+    他记得你的偏爱与心事，懂你的欢喜与低落
+  </text>
+
+  <!-- Features -->
+  <text x="600" y="500" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="300" fill="#ffffff" opacity="0.4">
+    私密对话全程守护 · 人设鲜活有温度 · 相处剧情随心演进
+  </text>
+
+  <!-- Small decorative elements -->
+  <text x="600" y="580" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="300" fill="#f4a261" opacity="0.5">
+    ✦ AI 虚拟陪伴 ✦
+  </text>
+</svg>
