@@ -5,6 +5,14 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-crimson);
   --font-mono: var(--font-geist-mono);
+  
+  /* Custom utilities */
+  --bg-gradient-radial: radial-gradient(var(--tw-gradient-stops));
+}
+
+/* Custom utility for radial gradient */
+.bg-gradient-radial {
+  background: radial-gradient(var(--tw-gradient-stops));
 }
 
 :root {
